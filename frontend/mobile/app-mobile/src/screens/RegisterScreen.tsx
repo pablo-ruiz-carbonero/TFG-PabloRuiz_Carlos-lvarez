@@ -10,15 +10,64 @@ import {
 } from "react-native";
 import Divider from "../components/Divider";
 import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { register } from "../services/authService";
+import { RegisterRequest } from "../types/auth";
+import { RootStackParamList } from "../types/navigation";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Register">;
 
 export default function RegisterScreen(): JSX.Element {
-  const navigation = useNavigation<any>();
-
+  const navigation = useNavigation<NavigationProp>();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-
+  const [loading, setLoading] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
+  const isValidEmail = (email: string) => email.includes("@");
+
+  const handleRegister = async () => {
+    if (!name || !email || !phone || !password) {
+      alert("Completa todos los campos");
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      alert("Email inválido");
+      return;
+    }
+
+    const registerData: RegisterRequest = {
+      name,
+      email,
+      phone,
+      password,
+    };
+
+    setLoading(true);
+
+    try {
+      const response = await register(registerData);
+
+      console.log(response);
+
+      // Limpia campos
+      setName("");
+      setEmail("");
+      setPhone("");
+      setPassword("");
+      await AsyncStorage.setItem("token", response.token);
+
+      navigation.navigate("Login");
+    } catch (error: any) {
+      alert(error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     Animated.parallel([
@@ -27,6 +76,7 @@ export default function RegisterScreen(): JSX.Element {
         duration: 800,
         useNativeDriver: true,
       }),
+
       Animated.spring(slideAnim, {
         toValue: 0,
         friction: 8,
@@ -53,35 +103,34 @@ export default function RegisterScreen(): JSX.Element {
           ]}
         >
           <Text style={styles.title}>🌱 Agro Link</Text>
+
           <Text style={styles.subtitle}>Crear cuenta</Text>
 
           <TextInput
             style={styles.input}
             placeholder="Nombre completo"
             placeholderTextColor="#999"
-            onChangeText={setEmail}
-            value={email}
-            keyboardType="default"
-            autoCapitalize="none"
+            onChangeText={setName}
+            value={name}
           />
 
           <TextInput
             style={styles.input}
             placeholder="Email"
             placeholderTextColor="#999"
-            onChangeText={setPassword}
-            value={password}
             keyboardType="email-address"
             autoCapitalize="none"
+            onChangeText={setEmail}
+            value={email}
           />
 
           <TextInput
             style={styles.input}
-            placeholder="Telefono"
+            placeholder="Teléfono"
             placeholderTextColor="#999"
-            onChangeText={setPassword}
-            value={password}
             keyboardType="phone-pad"
+            onChangeText={setPhone}
+            value={phone}
           />
 
           <TextInput
@@ -93,14 +142,30 @@ export default function RegisterScreen(): JSX.Element {
             value={password}
           />
 
+          {/* BOTÓN REGISTER */}
+
           <Pressable
-            onPress={() => navigation.navigate("Login")}
+            onPress={handleRegister}
+            disabled={loading}
             style={({ pressed }) => [
               styles.btnRegister,
-              { transform: [{ scale: pressed ? 0.96 : 1 }] },
+
+              {
+                transform: [
+                  {
+                    scale: pressed ? 0.96 : 1,
+                  },
+                ],
+              },
+
+              loading && {
+                opacity: 0.7,
+              },
             ]}
           >
-            <Text style={styles.btnText}>Crear cuenta</Text>
+            <Text style={styles.btnText}>
+              {loading ? "Creando cuenta..." : "Crear cuenta"}
+            </Text>
           </Pressable>
 
           <Divider />
@@ -109,7 +174,9 @@ export default function RegisterScreen(): JSX.Element {
             onPress={() => navigation.navigate("Login")}
             style={({ pressed }) => [
               styles.btnLogin,
-              { opacity: pressed ? 0.6 : 1 },
+              {
+                opacity: pressed ? 0.6 : 1,
+              },
             ]}
           >
             <Text style={styles.btnLoginText}>
