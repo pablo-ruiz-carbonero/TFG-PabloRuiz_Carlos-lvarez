@@ -6,7 +6,8 @@ import LoginScreen from "../screens/LoginScreen";
 import RegisterScreen from "../screens/RegisterScreen";
 import HomeScreen from "../screens/HomeScreen";
 import { ActivityIndicator, View } from "react-native";
-
+import WeatherScreen from "../screens/WeatherScreen";
+import { ProfileScreen } from "../screens/ProfileScreen";
 const Stack = createNativeStackNavigator();
 
 export default function RootNavigator() {
@@ -43,7 +44,7 @@ export default function RootNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {token ? (
-        <Stack.Screen name="Home" component={HomeScreen} />
+        <><Stack.Screen name="Home" component={HomeScreen} /><Stack.Screen name="WeatherScreen" component={WeatherScreen} /><Stack.Screen name="ProfileScreen" component={ProfileScreen} /></>
       ) : (
         <>
           <Stack.Screen name="Login" component={LoginScreen} />
