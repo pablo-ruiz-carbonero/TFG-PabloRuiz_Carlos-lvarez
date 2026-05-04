@@ -1,29 +1,17 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { useState, useEffect, useRef } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Animated,
-  Pressable,
-} from "react-native";
+import React, { useState, useRef } from "react";
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Pressable } from "react-native";
+import { colors, shared, radius, spacing, font } from "../styles/theme";
 
-const colores = ["#4f46e5", "#16a34a", "#f97316", "#dc2626", "#0ea5e9"];
+const avatarColors = [colors.primary, colors.primaryLight, "#16a34a", "#0ea5e9"];
 
 export default function PerfilMenu({ user }: { user: any }) {
   const [menuVisible, setMenuVisible] = useState(false);
   const scaleAnim = useRef(new Animated.Value(0)).current;
+  const colorFondo = useRef(avatarColors[Math.floor(Math.random() * avatarColors.length)]).current;
 
-  // 🎨 Color fijo por usuario (no cambia cada render)
-  const colorFondo = useRef(
-    colores[Math.floor(Math.random() * colores.length)],
-  ).current;
-
-  // 🎬 Animación menú
   const toggleMenu = () => {
-    setMenuVisible(!menuVisible);
-
+    setMenuVisible((value) => !value);
     Animated.spring(scaleAnim, {
       toValue: menuVisible ? 0 : 1,
       useNativeDriver: true,
@@ -38,21 +26,16 @@ export default function PerfilMenu({ user }: { user: any }) {
 
   return (
     <View style={styles.container}>
-      {/* AVATAR */}
-      <TouchableOpacity onPress={toggleMenu}>
+      <TouchableOpacity onPress={toggleMenu} style={styles.touchable}>
         {user?.photoURL ? (
-          <Animated.Image
-            source={{ uri: user.photoURL }}
-            style={styles.avatarImg}
-          />
+          <Animated.Image source={{ uri: user.photoURL }} style={styles.avatarImg} />
         ) : (
-          <View style={[styles.avatar, { backgroundColor: colorFondo }]}>
-            <Text style={styles.letra}>{inicial}</Text>
+          <View style={[styles.avatar, { backgroundColor: colorFondo }]}> 
+            <Text style={styles.letter}>{inicial}</Text>
           </View>
         )}
       </TouchableOpacity>
 
-      {/* MENU */}
       {menuVisible && (
         <Animated.View
           style={[
@@ -62,7 +45,7 @@ export default function PerfilMenu({ user }: { user: any }) {
                 {
                   scale: scaleAnim.interpolate({
                     inputRange: [0, 1],
-                    outputRange: [0.8, 1],
+                    outputRange: [0.84, 1],
                   }),
                 },
               ],
@@ -70,13 +53,11 @@ export default function PerfilMenu({ user }: { user: any }) {
             },
           ]}
         >
-          <Text style={styles.item}>Perfil</Text>
-          <Pressable onPress={handleLogout}>
-            <Text style={styles.item}>Configuracion</Text>
-          </Pressable>
-          <Pressable onPress={handleLogout}>
-            <Text style={styles.item}>Cerrar sesión</Text>
-          </Pressable>
+          {['Perfil', 'Configuración', 'Cerrar sesión'].map((item) => (
+            <Pressable key={item} onPress={handleLogout} style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]}>
+              <Text style={styles.menuText}>{item}</Text>
+            </Pressable>
+          ))}
         </Animated.View>
       )}
     </View>
@@ -86,38 +67,51 @@ export default function PerfilMenu({ user }: { user: any }) {
 const styles = StyleSheet.create({
   container: {
     alignItems: "flex-end",
-    padding: 20,
+    padding: spacing.sm,
   },
-
+  touchable: {
+    borderRadius: radius.full,
+  },
   avatar: {
-    width: 45,
-    height: 45,
-    borderRadius: 22.5,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 2,
+    borderColor: colors.surface,
   },
-
-  letra: {
-    color: "white",
-    fontWeight: "bold",
-    fontSize: 18,
+  letter: {
+    color: colors.white,
+    fontWeight: "800",
+    fontSize: font.lg,
   },
-
   avatarImg: {
-    width: 45,
-    height: 45,
-    borderRadius: 22.5,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
   },
-
   menu: {
-    marginTop: 10,
-    backgroundColor: "white",
-    borderRadius: 10,
-    padding: 10,
+    marginTop: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    minWidth: 140,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
     elevation: 6,
   },
-
-  item: {
-    paddingVertical: 8,
+  menuItem: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  menuItemPressed: {
+    backgroundColor: colors.primaryDim,
+  },
+  menuText: {
+    color: colors.textPrimary,
+    fontSize: font.sm,
   },
 });

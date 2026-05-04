@@ -7,4 +7,7 @@ export type RootStackParamList = {
   ConfiguracionScreen: undefined;
   WeatherScreen: undefined;
   ProfileScreen: undefined;
+  NewCorpScreen: undefined;
+  CropsScreen: undefined;
+  DetailCorpScreen: { cropId: string };
 }

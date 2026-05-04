@@ -1,17 +1,16 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
+import { colors, spacing } from "../styles/theme";
 
-const Divider = () => (
-  <View style={styles.line} />
-);
+const Divider = () => <View style={styles.line} />;
 
 const styles = StyleSheet.create({
   line: {
     height: 1,
-    backgroundColor: "#413f3f",
-    marginVertical: 15,
-    width: "80%", // O "100%" según quieras que ocupe
-    alignSelf: "center", 
+    backgroundColor: colors.border,
+    marginVertical: spacing.lg,
+    width: "90%",
+    alignSelf: "center",
   }
 });
 

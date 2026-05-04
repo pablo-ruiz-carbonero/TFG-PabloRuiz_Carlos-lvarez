@@ -139,6 +139,29 @@ export const shared = StyleSheet.create({
     marginBottom: spacing.sm,
     marginTop: spacing.sm,
   },
+  title: {
+    fontSize: font.xxxl,
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  subtitle: {
+    fontSize: font.md,
+    color: colors.textSecond,
+    marginBottom: spacing.xl,
+  },
+  bodyText: {
+    fontSize: font.md,
+    color: colors.textPrimary,
+    lineHeight: 22,
+  },
+  labelText: {
+    color: colors.textSecond,
+    fontSize: font.sm,
+  },
+  strongText: {
+    color: colors.primary,
+    fontWeight: '700',
+  },
   // Row with space-between
   row: {
     flexDirection: 'row',
@@ -177,7 +200,14 @@ export const shared = StyleSheet.create({
     fontSize: font.xs,
     fontWeight: '600',
   },
-  // Tab bar (shared across screens that manage it internally)
+  // Divider
+  divider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: spacing.lg,
+    width: '100%',
+  },
+  // Tab bar
   tabBar: {
     flexDirection: 'row',
     backgroundColor: colors.white,
@@ -197,12 +227,9 @@ export const shared = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 2,
   },
-  tabIcon: {
-    fontSize: 20,
-  },
   tabLabel: {
     color: colors.textMuted,
-    fontSize: 10,
+    fontSize: font.xs,
     marginTop: 2,
     fontWeight: '500',
   },
@@ -210,7 +237,7 @@ export const shared = StyleSheet.create({
     color: colors.primary,
     fontWeight: '700',
   },
-  // Back button header
+  // Header back
   headerBack: {
     flexDirection: 'row',
     alignItems: 'center',
