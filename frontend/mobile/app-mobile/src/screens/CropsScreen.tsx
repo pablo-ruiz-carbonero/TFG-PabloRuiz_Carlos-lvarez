@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+// src/screens/CropsScreen.tsx
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,11 +10,16 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation, NavigationProp, useFocusEffect } from "@react-navigation/native";
+import {
+  useNavigation,
+  NavigationProp,
+  useFocusEffect,
+} from "@react-navigation/native";
 import { colors, shared, spacing, font, radius } from "../styles/theme";
 import { RootStackParamList } from "../types/navigation";
 import { Crop } from "../types/crops";
 import { cropsService } from "../services/cropsService";
+import { tasksService } from "../services/tasksService";
 
 type NavigationProp_Crops = NavigationProp<RootStackParamList>;
 
@@ -21,22 +27,39 @@ export default function CropsScreen() {
   const navigation = useNavigation<NavigationProp_Crops>();
   const [crops, setCrops] = useState<Crop[]>([]);
   const [filteredCrops, setFilteredCrops] = useState<Crop[]>([]);
+  const [pendingCounts, setPendingCounts] = useState<Record<string, number>>(
+    {},
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // Cargar cultivos cuando la pantalla se enfoca (actualizar si vuelvo de agregar cultivo)
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       loadCrops();
-    }, [])
+    }, []),
   );
 
   const loadCrops = async () => {
     try {
       setLoading(true);
       const data = await cropsService.getAllCrops();
+
+      // Cargar contadores reales de tareas pendientes en paralelo
+      const counts = await Promise.all(
+        data.map((crop) =>
+          tasksService
+            .getPendingCount(crop.id)
+            .then((n) => ({ id: crop.id, n })),
+        ),
+      );
+      const countsMap: Record<string, number> = {};
+      counts.forEach(({ id, n }) => {
+        countsMap[id] = n;
+      });
+
       setCrops(data);
       setFilteredCrops(data);
+      setPendingCounts(countsMap);
     } catch (error) {
       console.error("Error loading crops:", error);
     } finally {
@@ -49,37 +72,35 @@ export default function CropsScreen() {
     if (query.trim() === "") {
       setFilteredCrops(crops);
     } else {
-      const filtered = crops.filter(
-        (crop) =>
-          crop.name.toLowerCase().includes(query.toLowerCase()) ||
-          crop.variety.toLowerCase().includes(query.toLowerCase())
+      setFilteredCrops(
+        crops.filter(
+          (crop) =>
+            crop.name.toLowerCase().includes(query.toLowerCase()) ||
+            crop.variety.toLowerCase().includes(query.toLowerCase()),
+        ),
       );
-      setFilteredCrops(filtered);
     }
   };
 
-  const handleCropPress = (cropId: string) => {
-    navigation.navigate("DetailCorpScreen", { cropId });
-  };
-
   const renderCropCard = ({ item }: { item: Crop }) => {
-    const daysOld = item.daysOld || 0;
-    const seedDate = new Date(item.seedDate);
-    const seedDateFormatted = seedDate.toLocaleDateString("es-ES", {
-      day: "numeric",
-      month: "short",
-    });
+    const pending = pendingCounts[item.id] ?? 0;
+    const seedDateFormatted = new Date(item.seedDate).toLocaleDateString(
+      "es-ES",
+      {
+        day: "numeric",
+        month: "short",
+      },
+    );
 
     return (
       <Pressable
-        style={({ pressed }) => [
-          styles.cropCard,
-          pressed && { opacity: 0.8 },
-        ]}
-        onPress={() => handleCropPress(item.id)}
+        style={({ pressed }) => [styles.cropCard, pressed && { opacity: 0.8 }]}
+        onPress={() =>
+          navigation.navigate("DetailCorpScreen", { cropId: item.id })
+        }
       >
         <View style={styles.cropHeader}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.cropName}>{item.name}</Text>
             <Text style={styles.cropVariety}>{item.variety}</Text>
           </View>
@@ -95,15 +116,24 @@ export default function CropsScreen() {
           </View>
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Edad</Text>
-            <Text style={styles.infoValue}>{daysOld}d</Text>
+            <Text style={styles.infoValue}>{item.daysOld ?? 0}d</Text>
           </View>
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Tareas</Text>
-            <Text style={styles.infoValue}>{item.tasksCount}</Text>
+            <View style={styles.tasksCell}>
+              <Text
+                style={[styles.infoValue, pending > 0 && styles.infoValueAlert]}
+              >
+                {pending}
+              </Text>
+              {pending > 0 && <View style={styles.pendingDot} />}
+            </View>
           </View>
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Parcela</Text>
-            <Text style={styles.infoValue}>{item.parcelName}</Text>
+            <Text style={styles.infoValue} numberOfLines={1}>
+              {item.parcelName}
+            </Text>
           </View>
         </View>
 
@@ -111,7 +141,15 @@ export default function CropsScreen() {
           <Text style={styles.detailText}>
             {item.surfaceArea} ha • {item.cropType}
           </Text>
-          <Text style={styles.actionText}>Ver detalles →</Text>
+          {pending > 0 ? (
+            <View style={styles.pendingPill}>
+              <Text style={styles.pendingPillText}>
+                {pending} pendiente{pending > 1 ? "s" : ""}
+              </Text>
+            </View>
+          ) : (
+            <Text style={styles.actionText}>Ver detalles →</Text>
+          )}
         </View>
       </Pressable>
     );
@@ -123,10 +161,7 @@ export default function CropsScreen() {
       <View style={styles.header}>
         <Text style={shared.sectionTitle}>Mis Cultivos</Text>
         <Pressable
-          style={({ pressed }) => [
-            styles.btnNew,
-            pressed && { opacity: 0.8 },
-          ]}
+          style={({ pressed }) => [styles.btnNew, pressed && { opacity: 0.8 }]}
           onPress={() => navigation.navigate("NewCorpScreen")}
         >
           <Text style={styles.btnNewText}>+ Nuevo</Text>
@@ -144,7 +179,6 @@ export default function CropsScreen() {
         />
       </View>
 
-      {/* Crops List */}
       {loading ? (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -159,7 +193,9 @@ export default function CropsScreen() {
               style={styles.btnCreateFirst}
               onPress={() => navigation.navigate("NewCorpScreen")}
             >
-              <Text style={styles.btnCreateFirstText}>Crear primer cultivo</Text>
+              <Text style={styles.btnCreateFirstText}>
+                Crear primer cultivo
+              </Text>
             </Pressable>
           )}
         </View>
@@ -192,11 +228,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: radius.md,
   },
-  btnNewText: {
-    color: colors.white,
-    fontWeight: "700",
-    fontSize: font.sm,
-  },
+  btnNewText: { color: colors.white, fontWeight: "700", fontSize: font.sm },
   searchContainer: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
@@ -214,6 +246,11 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderLeftWidth: 4,
     borderLeftColor: colors.primary,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   cropHeader: {
     flexDirection: "row",
@@ -221,45 +258,45 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     marginBottom: spacing.md,
   },
-  cropName: {
-    fontSize: font.lg,
-    fontWeight: "700",
-    color: colors.textPrimary,
-  },
+  cropName: { fontSize: font.lg, fontWeight: "700", color: colors.textPrimary },
   cropVariety: {
     fontSize: font.sm,
     color: colors.textSecond,
     marginTop: spacing.xs,
   },
   badge: {
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.primaryDim,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: radius.sm,
   },
-  badgeText: {
-    color: colors.primary,
-    fontWeight: "600",
-    fontSize: font.xs,
-  },
+  badgeText: { color: colors.primary, fontWeight: "600", fontSize: font.xs },
   cropInfo: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: spacing.md,
   },
-  infoItem: {
-    flex: 1,
-  },
-  infoLabel: {
-    fontSize: font.xs,
-    color: colors.textMuted,
-    fontWeight: "600",
-  },
+  infoItem: { flex: 1 },
+  infoLabel: { fontSize: font.xs, color: colors.textMuted, fontWeight: "600" },
   infoValue: {
     fontSize: font.md,
     color: colors.textPrimary,
     fontWeight: "700",
     marginTop: spacing.xs,
+  },
+  infoValueAlert: { color: colors.warning },
+  tasksCell: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: spacing.xs,
+  },
+  pendingDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.warning,
+    marginBottom: 1,
   },
   cropFooter: {
     flexDirection: "row",
@@ -269,20 +306,20 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  detailText: {
+  detailText: { fontSize: font.xs, color: colors.textSecond },
+  actionText: { color: colors.primary, fontWeight: "600", fontSize: font.sm },
+  pendingPill: {
+    backgroundColor: colors.warningDim,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+  },
+  pendingPillText: {
+    color: colors.warning,
     fontSize: font.xs,
-    color: colors.textSecond,
+    fontWeight: "700",
   },
-  actionText: {
-    color: colors.primary,
-    fontWeight: "600",
-    fontSize: font.sm,
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
+  centerContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   emptyText: {
     fontSize: font.md,
     color: colors.textSecond,
@@ -299,8 +336,5 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: font.md,
   },
-  listContent: {
-    paddingBottom: spacing.xl,
-  },
+  listContent: { paddingBottom: spacing.xl },
 });
-

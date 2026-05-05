@@ -10,7 +10,7 @@ export default function WeatherCard({ navigation }: { navigation: any }) {
   };
 
   return (
-    <Pressable style={[shared.card, styles.card]} onPress={() => navigation.navigate("Weather")}>
+    <Pressable style={[shared.card, styles.card]} onPress={() => navigation.navigate("WeatherScreen")}>
       <View style={styles.headerRow}>
         <View>
           <Text style={styles.label}>Clima actual</Text>

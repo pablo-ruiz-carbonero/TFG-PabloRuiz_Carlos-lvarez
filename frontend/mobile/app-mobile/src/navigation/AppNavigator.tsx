@@ -10,6 +10,9 @@ import { ProfileScreen } from "../screens/ProfileScreen";
 import NewCorpScreen from "../screens/NewCorpScreen";
 import CropsScreen from "../screens/CropsScreen";
 import DetailCorpScreen from "../screens/DetailCorpScreen";
+import NewTaskScreen from "../screens/NewTask";
+import ChatListScreen from "../screens/ChatListScreen";
+import WeatherScreen from "../screens/WeatherScreen";
 const Stack = createNativeStackNavigator();
 
 export default function RootNavigator() {
@@ -52,6 +55,9 @@ export default function RootNavigator() {
           <Stack.Screen name="NewCorpScreen" component={NewCorpScreen} />
           <Stack.Screen name="CropsScreen" component={CropsScreen} />
           <Stack.Screen name="DetailCorpScreen" component={DetailCorpScreen} />
+          <Stack.Screen name="NewTask" component={NewTaskScreen} />
+          <Stack.Screen name="ChatListScreen" component={ChatListScreen} />
+          <Stack.Screen name="WeatherScreen" component={WeatherScreen} />
         </>
       ) : (
         <>

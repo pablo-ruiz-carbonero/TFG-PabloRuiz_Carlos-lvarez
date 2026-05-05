@@ -10,4 +10,5 @@ export type RootStackParamList = {
   NewCorpScreen: undefined;
   CropsScreen: undefined;
   DetailCorpScreen: { cropId: string };
-}
+  NewTask: { cropId: string };
+};
