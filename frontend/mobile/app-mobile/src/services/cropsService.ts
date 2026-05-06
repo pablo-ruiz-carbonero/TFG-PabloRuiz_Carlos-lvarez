@@ -1,91 +1,56 @@
 // src/services/cropsService.ts
 import { Crop, CreateCropRequest, UpdateCropRequest, Parcel } from "../types/crops";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_BASE_URL = "http://localhost:3000/api"; // Cambiar según tu backend
+const API_BASE_URL = "http://192.168.1.179:3000";
 
-// Mock data para desarrollo
-const mockCrops: Crop[] = [
-  {
-    id: "1",
-    name: "Tomate Cherry",
-    variety: "Sweet 100",
-    cropType: "Hortalizas",
-    parcelId: "P1",
-    parcelName: "Parcela A1",
-    surfaceArea: 0.5,
-    seedDate: "2026-03-12",
-    currentPhase: "En plántano",
-    daysOld: 45,
-    expectedHarvest: "2026-06-12",
-    expectedProduction: 500,
-    tasksCount: 3,
-    lastWatering: "2026-05-04",
-    lastFertilization: "2026-05-01",
-    irrigationDays: 2,
-    fertilizationDays: 7,
-    notes: "Cultivo principal de invernadero",
-    status: "active",
-    createdAt: "2026-03-12",
-    updatedAt: "2026-05-04",
-  },
-  {
-    id: "2",
-    name: "Pimiento Rojo",
-    variety: "California",
-    cropType: "Hortalizas",
-    parcelId: "P2",
-    parcelName: "Parcela B1",
-    surfaceArea: 0.8,
-    seedDate: "2026-02-20",
-    currentPhase: "Crecimiento",
-    daysOld: 74,
-    expectedHarvest: "2026-07-20",
-    expectedProduction: 800,
-    tasksCount: 2,
-    lastWatering: "2026-05-04",
-    lastFertilization: "2026-04-28",
-    irrigationDays: 2,
-    fertilizationDays: 10,
-    notes: "Cultivo resistente a plagas",
-    status: "active",
-    createdAt: "2026-02-20",
-    updatedAt: "2026-05-04",
-  },
-  {
-    id: "3",
-    name: "Lechuga",
-    variety: "Iceberg",
-    cropType: "Verduras",
-    parcelId: "P1",
-    parcelName: "Parcela A2",
-    surfaceArea: 0.3,
-    seedDate: "2026-04-10",
-    currentPhase: "Crecimiento",
-    daysOld: 24,
-    expectedHarvest: "2026-05-25",
-    expectedProduction: 200,
-    tasksCount: 1,
-    lastWatering: "2026-05-04",
-    lastFertilization: "2026-04-25",
-    irrigationDays: 1,
-    fertilizationDays: 14,
-    notes: "Cosecha próxima",
-    status: "active",
-    createdAt: "2026-04-10",
-    updatedAt: "2026-05-04",
-  },
-];
+const getAuthHeaders = async () => {
+  const token = await AsyncStorage.getItem("token");
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+  };
+};
 
 export const cropsService = {
   // Obtener todos los cultivos
   async getAllCrops(): Promise<Crop[]> {
     try {
-      // Descomentar cuando el backend esté listo:
-      // const response = await fetch(`${API_BASE_URL}/crops`);
-      // return response.json();
-      
-      // Por ahora, devolvemos datos mock
-      return mockCrops;
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_BASE_URL}/crops`, {
+        headers,
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al obtener cultivos');
+      }
+
+      const crops = await response.json();
+
+      // Transformar datos del backend al formato del frontend
+      return crops.map((crop: any) => ({
+        id: crop.id.toString(),
+        name: crop.nombre,
+        variety: crop.variedad,
+        cropType: crop.tipo_cultivo,
+        parcelId: crop.parcela_id?.toString() || '',
+        parcelName: `Parcela ${crop.parcela_id || 'N/A'}`,
+        surfaceArea: parseFloat(crop.superficie),
+        seedDate: crop.fecha_siembra,
+        currentPhase: crop.fase_actual || 'Plántula',
+        expectedHarvest: crop.fecha_cosecha_esperada,
+        daysOld: Math.floor((new Date().getTime() - new Date(crop.fecha_siembra).getTime()) / (1000 * 60 * 60 * 24)),
+        notes: crop.notas,
+        tasksCount: 0, // Se calculará después
+        lastWatering: crop.ultimo_riego,
+        lastFertilization: crop.ultima_fertilizacion,
+        expectedProduction: crop.produccion_esperada,
+        irrigationDays: crop.dias_riego,
+        fertilizationDays: crop.dias_fertilizacion,
+        status: crop.status,
+        createdAt: crop.fecha_creacion,
+        updatedAt: crop.updatedAt,
+      }));
     } catch (error) {
       console.error("Error fetching crops:", error);
       throw error;
@@ -95,13 +60,40 @@ export const cropsService = {
   // Obtener un cultivo por ID
   async getCropById(cropId: string): Promise<Crop> {
     try {
-      // Descomentar cuando el backend esté listo:
-      // const response = await fetch(`${API_BASE_URL}/crops/${cropId}`);
-      // return response.json();
-      
-      const crop = mockCrops.find(c => c.id === cropId);
-      if (!crop) throw new Error("Cultivo no encontrado");
-      return crop;
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_BASE_URL}/crops/${cropId}`, {
+        headers,
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al obtener cultivo');
+      }
+
+      const crop = await response.json();
+
+      return {
+        id: crop.id.toString(),
+        name: crop.nombre,
+        variety: crop.variedad,
+        cropType: crop.tipo_cultivo,
+        parcelId: crop.parcela_id?.toString() || '',
+        parcelName: `Parcela ${crop.parcela_id || 'N/A'}`,
+        surfaceArea: parseFloat(crop.superficie),
+        seedDate: crop.fecha_siembra,
+        currentPhase: crop.fase_actual || 'Plántula',
+        expectedHarvest: crop.fecha_cosecha_esperada,
+        daysOld: Math.floor((new Date().getTime() - new Date(crop.fecha_siembra).getTime()) / (1000 * 60 * 60 * 24)),
+        notes: crop.notas,
+        tasksCount: 0,
+        lastWatering: crop.ultimo_riego,
+        lastFertilization: crop.ultima_fertilizacion,
+        expectedProduction: crop.produccion_esperada,
+        irrigationDays: crop.dias_riego,
+        fertilizationDays: crop.dias_fertilizacion,
+        status: crop.status,
+        createdAt: crop.fecha_creacion,
+        updatedAt: crop.updatedAt,
+      };
     } catch (error) {
       console.error("Error fetching crop:", error);
       throw error;
@@ -111,25 +103,54 @@ export const cropsService = {
   // Crear nuevo cultivo
   async createCrop(data: CreateCropRequest): Promise<Crop> {
     try {
-      // Descomentar cuando el backend esté listo:
-      // const response = await fetch(`${API_BASE_URL}/crops`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(data),
-      // });
-      // return response.json();
-      
-      const newCrop: Crop = {
-        id: Math.random().toString(),
-        ...data,
-        currentPhase: "Plántula",
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_BASE_URL}/crops`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          nombre: data.name,
+          variedad: data.variety,
+          tipo_cultivo: data.cropType,
+          parcela_id: parseInt(data.parcelId),
+          superficie: data.surfaceArea,
+          fecha_siembra: data.seedDate,
+          notas: data.notes,
+          fase_actual: 'Plántula',
+          dias_riego: 2,
+          dias_fertilizacion: 7,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al crear cultivo');
+      }
+
+      const crop = await response.json();
+
+      return {
+        id: crop.id.toString(),
+        name: crop.nombre,
+        variety: crop.variedad,
+        cropType: crop.tipo_cultivo,
+        parcelId: crop.parcela_id?.toString() || '',
+        parcelName: `Parcela ${crop.parcela_id || 'N/A'}`,
+        surfaceArea: parseFloat(crop.superficie),
+        seedDate: crop.fecha_siembra,
+        currentPhase: crop.fase_actual || 'Plántula',
+        expectedHarvest: crop.fecha_cosecha_esperada,
+        daysOld: 0,
+        notes: crop.notas,
         tasksCount: 0,
-        status: "active",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        lastWatering: crop.ultimo_riego,
+        lastFertilization: crop.ultima_fertilizacion,
+        expectedProduction: crop.produccion_esperada,
+        irrigationDays: crop.dias_riego,
+        fertilizationDays: crop.dias_fertilizacion,
+        status: crop.status,
+        createdAt: crop.fecha_creacion,
+        updatedAt: crop.updatedAt,
       };
-      mockCrops.push(newCrop);
-      return newCrop;
     } catch (error) {
       console.error("Error creating crop:", error);
       throw error;
@@ -139,23 +160,56 @@ export const cropsService = {
   // Actualizar cultivo
   async updateCrop(cropId: string, data: UpdateCropRequest): Promise<Crop> {
     try {
-      // Descomentar cuando el backend esté listo:
-      // const response = await fetch(`${API_BASE_URL}/crops/${cropId}`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(data),
-      // });
-      // return response.json();
-      
-      const index = mockCrops.findIndex(c => c.id === cropId);
-      if (index === -1) throw new Error("Cultivo no encontrado");
-      
-      mockCrops[index] = {
-        ...mockCrops[index],
-        ...data,
-        updatedAt: new Date().toISOString(),
+      const headers = await getAuthHeaders();
+      const updateData: any = {};
+
+      if (data.name) updateData.nombre = data.name;
+      if (data.variety) updateData.variedad = data.variety;
+      if (data.cropType) updateData.tipo_cultivo = data.cropType;
+      if (data.parcelId) updateData.parcela_id = parseInt(data.parcelId);
+      if (data.surfaceArea !== undefined) updateData.superficie = data.surfaceArea;
+      if (data.seedDate) updateData.fecha_siembra = data.seedDate;
+      if (data.currentPhase) updateData.fase_actual = data.currentPhase;
+      if (data.expectedHarvest) updateData.fecha_cosecha_esperada = data.expectedHarvest;
+      if (data.notes !== undefined) updateData.notas = data.notes;
+      if (data.status) updateData.status = data.status;
+
+      const response = await fetch(`${API_BASE_URL}/crops/${cropId}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(updateData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al actualizar cultivo');
+      }
+
+      const crop = await response.json();
+
+      return {
+        id: crop.id.toString(),
+        name: crop.nombre,
+        variety: crop.variedad,
+        cropType: crop.tipo_cultivo,
+        parcelId: crop.parcela_id?.toString() || '',
+        parcelName: `Parcela ${crop.parcela_id || 'N/A'}`,
+        surfaceArea: parseFloat(crop.superficie),
+        seedDate: crop.fecha_siembra,
+        currentPhase: crop.fase_actual || 'Plántula',
+        expectedHarvest: crop.fecha_cosecha_esperada,
+        daysOld: Math.floor((new Date().getTime() - new Date(crop.fecha_siembra).getTime()) / (1000 * 60 * 60 * 24)),
+        notes: crop.notas,
+        tasksCount: 0,
+        lastWatering: crop.ultimo_riego,
+        lastFertilization: crop.ultima_fertilizacion,
+        expectedProduction: crop.produccion_esperada,
+        irrigationDays: crop.dias_riego,
+        fertilizationDays: crop.dias_fertilizacion,
+        status: crop.status,
+        createdAt: crop.fecha_creacion,
+        updatedAt: crop.updatedAt,
       };
-      return mockCrops[index];
     } catch (error) {
       console.error("Error updating crop:", error);
       throw error;
@@ -165,12 +219,15 @@ export const cropsService = {
   // Eliminar cultivo
   async deleteCrop(cropId: string): Promise<void> {
     try {
-      // Descomentar cuando el backend esté listo:
-      // await fetch(`${API_BASE_URL}/crops/${cropId}`, { method: 'DELETE' });
-      
-      const index = mockCrops.findIndex(c => c.id === cropId);
-      if (index > -1) {
-        mockCrops.splice(index, 1);
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_BASE_URL}/crops/${cropId}`, {
+        method: 'DELETE',
+        headers,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al eliminar cultivo');
       }
     } catch (error) {
       console.error("Error deleting crop:", error);
@@ -178,18 +235,26 @@ export const cropsService = {
     }
   },
 
-  // Obtener parcelas (para el selector en NewCorpScreen)
+  // Obtener parcelas
   async getParcels(): Promise<Parcel[]> {
     try {
-      // Descomentar cuando el backend esté listo:
-      // const response = await fetch(`${API_BASE_URL}/parcels`);
-      // return response.json();
-      
-      return [
-        { id: "P1", name: "Parcela A1", location: "Zona Norte", size: 1.2 },
-        { id: "P2", name: "Parcela B1", location: "Zona Sur", size: 0.8 },
-        { id: "P3", name: "Parcela C1", location: "Zona Este", size: 1.5 },
-      ];
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_BASE_URL}/crops/parcels/list`, {
+        headers,
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al obtener parcelas');
+      }
+
+      const parcels = await response.json();
+
+      return parcels.map((parcel: any) => ({
+        id: parcel.id.toString(),
+        name: parcel.nombre,
+        location: parcel.ubicacion,
+        size: parcel.tamano,
+      }));
     } catch (error) {
       console.error("Error fetching parcels:", error);
       throw error;

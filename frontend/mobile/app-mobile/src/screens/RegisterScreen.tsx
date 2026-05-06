@@ -22,9 +22,9 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Register">;
 
 export default function RegisterScreen(): JSX.Element {
   const navigation = useNavigation<NavigationProp>();
-  const [name, setName] = useState("");
+  const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [telefono, setTelefono] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -32,7 +32,7 @@ export default function RegisterScreen(): JSX.Element {
   const isValidEmail = (value: string) => value.includes("@");
 
   const handleRegister = async () => {
-    if (!name || !email || !phone || !password) {
+    if (!nombre || !email || !telefono || !password) {
       alert("Completa todos los campos");
       return;
     }
@@ -42,19 +42,19 @@ export default function RegisterScreen(): JSX.Element {
       return;
     }
 
-    const registerData: RegisterRequest = { name, email, phone, password };
+    const registerData: RegisterRequest = { nombre, email, telefono, password };
     setLoading(true);
 
     try {
       const response = await register(registerData);
       await AsyncStorage.setItem("token", response.token);
-      setName("");
+      setNombre("");
       setEmail("");
-      setPhone("");
+      setTelefono("");
       setPassword("");
       navigation.navigate("Login");
     } catch (error: any) {
-      alert(error);
+      alert(error.message || "Error en el registro");
     } finally {
       setLoading(false);
     }
@@ -100,8 +100,8 @@ export default function RegisterScreen(): JSX.Element {
               style={shared.input}
               placeholder="Nombre completo"
               placeholderTextColor={colors.textMuted}
-              onChangeText={setName}
-              value={name}
+              onChangeText={setNombre}
+              value={nombre}
             />
 
             <TextInput
@@ -119,8 +119,8 @@ export default function RegisterScreen(): JSX.Element {
               placeholder="Teléfono"
               placeholderTextColor={colors.textMuted}
               keyboardType="phone-pad"
-              onChangeText={setPhone}
-              value={phone}
+              onChangeText={setTelefono}
+              value={telefono}
             />
 
             <TextInput

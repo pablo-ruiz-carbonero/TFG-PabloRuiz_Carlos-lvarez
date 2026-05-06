@@ -8,13 +8,17 @@ export interface LoginRequest {
 }
 
 export interface RegisterRequest {
-  name: string;
+  nombre: string;
   email: string;
-  phone: string;
+  telefono?: string;
   password: string;
 }
 
 export interface AuthResponse {
-  user: User;
+  token: string;
+  user?: User;
+}
+
+export interface RegisterResponse {
   token: string;
 }

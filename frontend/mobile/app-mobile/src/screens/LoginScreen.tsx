@@ -50,7 +50,7 @@ export default function LoginScreen(): JSX.Element {
       setEmail("");
       setPassword("");
     } catch (error: any) {
-      alert(error);
+      alert(error.message || "Error en el login");
     } finally {
       setLoading(false);
     }

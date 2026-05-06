@@ -1,0 +1,5 @@
+DB_HOST=localhost
+DB_PORT=3310
+DB_USER=tfg_user
+DB_PASSWORD=tfg_password
+DB_NAME=tfg_agricola
