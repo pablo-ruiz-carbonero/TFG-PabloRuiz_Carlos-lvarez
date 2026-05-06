@@ -13,6 +13,7 @@ import DetailCorpScreen from "../screens/DetailCorpScreen";
 import NewTaskScreen from "../screens/NewTask";
 import ChatListScreen from "../screens/ChatListScreen";
 import WeatherScreen from "../screens/WeatherScreen";
+import ProductDetailScreen from "../screens/ProductDetailScreen";
 const Stack = createNativeStackNavigator();
 
 export default function RootNavigator() {
@@ -58,6 +59,7 @@ export default function RootNavigator() {
           <Stack.Screen name="NewTask" component={NewTaskScreen} />
           <Stack.Screen name="ChatListScreen" component={ChatListScreen} />
           <Stack.Screen name="WeatherScreen" component={WeatherScreen} />
+          <Stack.Screen name="ProductDetailScreen" component={ProductDetailScreen} />
         </>
       ) : (
         <>
