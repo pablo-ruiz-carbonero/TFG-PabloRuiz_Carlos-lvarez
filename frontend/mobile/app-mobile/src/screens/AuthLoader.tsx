@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, ActivityIndicator } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function AuthLoader({ navigation }: any) {
@@ -35,12 +36,12 @@ export default function AuthLoader({ navigation }: any) {
   if (!checking) return null;
 
   return (
-    <View style={{
+    <SafeAreaView style={{
       flex: 1,
       justifyContent: "center",
       alignItems: "center"
     }}>
       <ActivityIndicator size="large" />
-    </View>
+    </SafeAreaView>
   );
 }

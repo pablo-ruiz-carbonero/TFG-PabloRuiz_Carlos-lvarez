@@ -4,10 +4,16 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import LoginScreen from "../screens/LoginScreen";
 import RegisterScreen from "../screens/RegisterScreen";
-import HomeScreen from "../screens/HomeScreen";
+import BottomNav from "../navigation/BottomNav";
 import { ActivityIndicator, View } from "react-native";
-import WeatherScreen from "../screens/WeatherScreen";
 import { ProfileScreen } from "../screens/ProfileScreen";
+import NewCorpScreen from "../screens/NewCorpScreen";
+import CropsScreen from "../screens/CropsScreen";
+import DetailCorpScreen from "../screens/DetailCorpScreen";
+import NewTaskScreen from "../screens/NewTask";
+import ChatListScreen from "../screens/ChatListScreen";
+import WeatherScreen from "../screens/WeatherScreen";
+import ProductDetailScreen from "../screens/ProductDetailScreen";
 const Stack = createNativeStackNavigator();
 
 export default function RootNavigator() {
@@ -44,7 +50,17 @@ export default function RootNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {token ? (
-        <><Stack.Screen name="Home" component={HomeScreen} /><Stack.Screen name="WeatherScreen" component={WeatherScreen} /><Stack.Screen name="ProfileScreen" component={ProfileScreen} /></>
+        <>
+          <Stack.Screen name="Main" component={BottomNav} />
+          <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
+          <Stack.Screen name="NewCorpScreen" component={NewCorpScreen} />
+          <Stack.Screen name="CropsScreen" component={CropsScreen} />
+          <Stack.Screen name="DetailCorpScreen" component={DetailCorpScreen} />
+          <Stack.Screen name="NewTask" component={NewTaskScreen} />
+          <Stack.Screen name="ChatListScreen" component={ChatListScreen} />
+          <Stack.Screen name="WeatherScreen" component={WeatherScreen} />
+          <Stack.Screen name="ProductDetailScreen" component={ProductDetailScreen} />
+        </>
       ) : (
         <>
           <Stack.Screen name="Login" component={LoginScreen} />
