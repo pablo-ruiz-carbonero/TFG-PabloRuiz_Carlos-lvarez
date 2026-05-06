@@ -11,4 +11,7 @@ export type RootStackParamList = {
   CropsScreen: undefined;
   DetailCorpScreen: { cropId: string };
   NewTask: { cropId: string };
+  TaskDetail: { taskId: string };
+  MarketplaceScreen: undefined;
+  ProductDetailScreen: { productId: string };
 };
