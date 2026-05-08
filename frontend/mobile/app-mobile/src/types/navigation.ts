@@ -14,4 +14,12 @@ export type RootStackParamList = {
   TaskDetail: { taskId: string };
   MarketplaceScreen: undefined;
   ProductDetailScreen: { productId: string };
+  PublishProductScreen: undefined;
+  ChatListScreen: undefined;
+  ChatScreen: {
+  conversationId: string;
+  participantName: string;
+  participantInitials: string;
+  online: boolean;
+};
 };

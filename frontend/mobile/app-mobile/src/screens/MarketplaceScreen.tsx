@@ -124,7 +124,7 @@ export default function MarketplaceScreen() {
         <Text style={styles.headerTitle}>Mercado</Text>
         <Pressable
           style={({ pressed }) => [styles.btnPublish, pressed && { opacity: 0.85 }]}
-          // onPress={() => navigation.navigate("PublishProductScreen")}
+          onPress={() => navigation.navigate("PublishProductScreen")}
         >
           <Text style={styles.btnPublishText}>+ Publicar</Text>
         </Pressable>
@@ -188,7 +188,7 @@ export default function MarketplaceScreen() {
           <Text style={styles.emptyText}>No hay productos disponibles</Text>
           <Pressable
             style={styles.btnEmpty}
-            // onPress={() => navigation.navigate("PublishProductScreen")}
+            onPress={() => navigation.navigate("PublishProductScreen")}
           >
             <Text style={styles.btnEmptyText}>Publicar el primero</Text>
           </Pressable>
