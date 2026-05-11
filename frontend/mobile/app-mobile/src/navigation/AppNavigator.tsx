@@ -6,7 +6,6 @@ import LoginScreen from "../screens/LoginScreen";
 import RegisterScreen from "../screens/RegisterScreen";
 import BottomNav from "../navigation/BottomNav";
 import { ActivityIndicator, View } from "react-native";
-import { ProfileScreen } from "../screens/ProfileScreen";
 import NewCorpScreen from "../screens/NewCorpScreen";
 import CropsScreen from "../screens/CropsScreen";
 import DetailCorpScreen from "../screens/DetailCorpScreen";
@@ -17,6 +16,11 @@ import ProductDetailScreen from "../screens/ProductDetailScreen";
 import PublishProductScreen from "../screens/PublishProductScreen";
 import ChatScreen from "../screens/WeatherScreen";
 import MarketPlaceScreen from "../screens/MarketplaceScreen";
+import EditProfileScreen from "../screens/EditProfileScreen";
+import MyListingsScreen from "../screens/MyListingsScreen";
+import NotificationsScreen from "../screens/NotificationsScreen";
+import ChangePasswordScreen from "../screens/ChangePasswordScreen";
+import ProfileScreen from "../screens/ProfileScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -63,10 +67,32 @@ export default function RootNavigator() {
           <Stack.Screen name="NewTask" component={NewTaskScreen} />
           <Stack.Screen name="ChatListScreen" component={ChatListScreen} />
           <Stack.Screen name="WeatherScreen" component={WeatherScreen} />
-          <Stack.Screen name="ProductDetailScreen" component={ProductDetailScreen} />
-          <Stack.Screen name="PublishProductScreen" component={PublishProductScreen} />
+          <Stack.Screen
+            name="ProductDetailScreen"
+            component={ProductDetailScreen}
+          />
+          <Stack.Screen
+            name="PublishProductScreen"
+            component={PublishProductScreen}
+          />
           <Stack.Screen name="ChatScreen" component={ChatScreen} />
-          <Stack.Screen name="MarketplaceScreen" component={MarketPlaceScreen} />
+          <Stack.Screen
+            name="MarketplaceScreen"
+            component={MarketPlaceScreen}
+          />
+          <Stack.Screen
+            name="EditProfileScreen"
+            component={EditProfileScreen}
+          />
+          <Stack.Screen name="MyListingsScreen" component={MyListingsScreen} />
+          <Stack.Screen
+            name="NotificationsScreen"
+            component={NotificationsScreen}
+          />
+          <Stack.Screen
+            name="ChangePasswordScreen"
+            component={ChangePasswordScreen}
+          />
         </>
       ) : (
         <>

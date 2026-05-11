@@ -1,25 +1,41 @@
 // src/types/navigation.ts
 
 export type RootStackParamList = {
+  // ── Auth ──────────────────────────────────────────────────
   Login: undefined;
   Register: undefined;
+
+  // ── BottomNav tabs ────────────────────────────────────────
   Home: undefined;
-  ConfiguracionScreen: undefined;
-  WeatherScreen: undefined;
-  ProfileScreen: undefined;
-  NewCorpScreen: undefined;
   CropsScreen: undefined;
+  MarketplaceScreen: undefined;
+  ChatListScreen: undefined;
+
+  // ── Crops stack ───────────────────────────────────────────
+  NewCorpScreen: undefined;
   DetailCorpScreen: { cropId: string };
   NewTask: { cropId: string };
-  TaskDetail: { taskId: string };
-  MarketplaceScreen: undefined;
+
+  // ── Marketplace stack ─────────────────────────────────────
   ProductDetailScreen: { productId: string };
   PublishProductScreen: undefined;
-  ChatListScreen: undefined;
+  MyListingsScreen: undefined;
+
+  // ── Chat stack ────────────────────────────────────────────
   ChatScreen: {
-  conversationId: string;
-  participantName: string;
-  participantInitials: string;
-  online: boolean;
-};
+    conversationId: string;
+    participantName: string;
+    participantInitials: string;
+    online: boolean;
+  };
+
+  // ── Perfil stack ──────────────────────────────────────────
+  ProfileScreen: undefined;
+  EditProfileScreen: undefined;
+  NotificationsScreen: undefined;
+  ChangePasswordScreen: undefined;
+
+  // ── Otras ─────────────────────────────────────────────────
+  WeatherScreen: undefined;
+  ConfiguracionScreen: undefined;
 };

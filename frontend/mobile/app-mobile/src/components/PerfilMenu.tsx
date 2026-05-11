@@ -1,14 +1,33 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useState, useRef } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Animated, Pressable } from "react-native";
-import { colors, shared, radius, spacing, font } from "../styles/theme";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Animated,
+  Pressable,
+} from "react-native";
+import { useNavigation, NavigationProp } from "@react-navigation/native";
+import { colors, radius, spacing, font } from "../styles/theme";
+import { RootStackParamList } from "../types/navigation";
 
-const avatarColors = [colors.primary, colors.primaryLight, "#16a34a", "#0ea5e9"];
+type Nav = NavigationProp<RootStackParamList>;
+
+const avatarColors = [
+  colors.primary,
+  colors.primaryLight,
+  "#16a34a",
+  "#0ea5e9",
+];
 
 export default function PerfilMenu({ user }: { user: any }) {
+  const navigation = useNavigation<Nav>();
   const [menuVisible, setMenuVisible] = useState(false);
   const scaleAnim = useRef(new Animated.Value(0)).current;
-  const colorFondo = useRef(avatarColors[Math.floor(Math.random() * avatarColors.length)]).current;
+  const colorFondo = useRef(
+    avatarColors[Math.floor(Math.random() * avatarColors.length)],
+  ).current;
 
   const toggleMenu = () => {
     setMenuVisible((value) => !value);
@@ -26,40 +45,25 @@ export default function PerfilMenu({ user }: { user: any }) {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity onPress={toggleMenu} style={styles.touchable}>
+      {/* Avatar — abre menú o navega directo según prefieras */}
+      <TouchableOpacity
+        onPress={() => navigation.navigate("ProfileScreen")}
+        style={styles.touchable}
+      >
         {user?.photoURL ? (
-          <Animated.Image source={{ uri: user.photoURL }} style={styles.avatarImg} />
+          <Animated.Image
+            source={{ uri: user.photoURL }}
+            style={styles.avatarImg}
+          />
         ) : (
-          <View style={[styles.avatar, { backgroundColor: colorFondo }]}> 
+          <View style={[styles.avatar, { backgroundColor: colorFondo }]}>
             <Text style={styles.letter}>{inicial}</Text>
           </View>
         )}
       </TouchableOpacity>
 
-      {menuVisible && (
-        <Animated.View
-          style={[
-            styles.menu,
-            {
-              transform: [
-                {
-                  scale: scaleAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.84, 1],
-                  }),
-                },
-              ],
-              opacity: scaleAnim,
-            },
-          ]}
-        >
-          {['Perfil', 'Configuración', 'Cerrar sesión'].map((item) => (
-            <Pressable key={item} onPress={handleLogout} style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]}>
-              <Text style={styles.menuText}>{item}</Text>
-            </Pressable>
-          ))}
-        </Animated.View>
-      )}
+      {/* Pressable vacío conservado por si lo necesitas para otra acción */}
+      <Pressable onPress={() => navigation.navigate("ProfileScreen")} />
     </View>
   );
 }
