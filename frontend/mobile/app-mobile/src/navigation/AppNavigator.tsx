@@ -1,48 +1,15 @@
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import React, { useEffect, useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+// src/navigation/AppNavigator.tsx
 
-import LoginScreen from "../screens/LoginScreen";
-import RegisterScreen from "../screens/RegisterScreen";
-import BottomNav from "../navigation/BottomNav";
-import { ActivityIndicator, View } from "react-native";
-import { ProfileScreen } from "../screens/ProfileScreen";
-import NewCorpScreen from "../screens/NewCorpScreen";
-import CropsScreen from "../screens/CropsScreen";
-import DetailCorpScreen from "../screens/DetailCorpScreen";
-import NewTaskScreen from "../screens/NewTask";
-import ChatListScreen from "../screens/ChatListScreen";
-import WeatherScreen from "../screens/WeatherScreen";
-import ProductDetailScreen from "../screens/ProductDetailScreen";
-import PublishProductScreen from "../screens/PublishProductScreen";
-import ChatScreen from "../screens/WeatherScreen";
-import MarketPlaceScreen from "../screens/MarketplaceScreen";
+import React from "react";
+import { useAuth } from "../features/auth/hooks/useAuth";
+import AuthStack from "./AuthStack";
+import MainStack from "./MainStack";
+import { View, ActivityIndicator } from "react-native";
 
-const Stack = createNativeStackNavigator();
+const AppNavigator = () => {
+  const { user, loading } = useAuth();
 
-export default function RootNavigator() {
-  const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState<string | null>(null);
-
-  const checkToken = async () => {
-    const stored = await AsyncStorage.getItem("token");
-    setToken(stored);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    checkToken();
-  }, []);
-
-  // 👇 CLAVE: volver a comprobar periódicamente
-  useEffect(() => {
-    const interval = setInterval(() => {
-      checkToken();
-    }, 800);
-
-    return () => clearInterval(interval);
-  }, []);
-
+  // ⏳ Mientras carga sesión
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
@@ -51,29 +18,8 @@ export default function RootNavigator() {
     );
   }
 
-  return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {token ? (
-        <>
-          <Stack.Screen name="Main" component={BottomNav} />
-          <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
-          <Stack.Screen name="NewCorpScreen" component={NewCorpScreen} />
-          <Stack.Screen name="CropsScreen" component={CropsScreen} />
-          <Stack.Screen name="DetailCorpScreen" component={DetailCorpScreen} />
-          <Stack.Screen name="NewTask" component={NewTaskScreen} />
-          <Stack.Screen name="ChatListScreen" component={ChatListScreen} />
-          <Stack.Screen name="WeatherScreen" component={WeatherScreen} />
-          <Stack.Screen name="ProductDetailScreen" component={ProductDetailScreen} />
-          <Stack.Screen name="PublishProductScreen" component={PublishProductScreen} />
-          <Stack.Screen name="ChatScreen" component={ChatScreen} />
-          <Stack.Screen name="MarketplaceScreen" component={MarketPlaceScreen} />
-        </>
-      ) : (
-        <>
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Register" component={RegisterScreen} />
-        </>
-      )}
-    </Stack.Navigator>
-  );
-}
+  // Switch automático
+  return user ? <MainStack /> : <AuthStack />;
+};
+
+export default AppNavigator;

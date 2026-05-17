@@ -3,7 +3,7 @@ import { View, Text, Pressable, StyleSheet, ScrollView, Animated } from "react-n
 import { SafeAreaView } from "react-native-safe-area-context";
 import PerfilMenu from "../components/PerfilMenu";
 import WeatherCard from "../components/WeatherCard";
-import { colors, shared, spacing, font, radius } from "../styles/theme";
+import { colors, shared, spacing, font, radius } from "../styles/Globaltheme";
 
 const resumenCultivos = [
   { value: 3, label: "Cultivos" },

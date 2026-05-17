@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
-import { colors, shared, spacing, font, radius } from "../styles/theme";
+import { colors, shared, spacing, font, radius } from "../styles/Globaltheme";
 import { RootStackParamList } from "../types/navigation";
 
 type Nav = NavigationProp<RootStackParamList>;

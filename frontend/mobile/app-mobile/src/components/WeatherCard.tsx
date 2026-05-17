@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import { colors, shared, spacing, font, radius } from "../styles/theme";
+import { colors, shared, spacing, font, radius } from "../styles/Globaltheme";
 
 export default function WeatherCard({ navigation }: { navigation: any }) {
   const weather = {
