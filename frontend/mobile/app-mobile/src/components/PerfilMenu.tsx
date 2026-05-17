@@ -9,7 +9,11 @@ import {
   Pressable,
 } from "react-native";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
+<<<<<<< HEAD
 import { colors, radius, spacing, font } from "../styles/Globaltheme";
+=======
+import { colors, radius, spacing, font } from "../styles/theme";
+>>>>>>> bde9bfa08138ad909d6680ffafd4d5a2bbf04f20
 import { RootStackParamList } from "../types/navigation";
 
 type Nav = NavigationProp<RootStackParamList>;

@@ -15,7 +15,11 @@ import {
   NavigationProp,
   useFocusEffect,
 } from "@react-navigation/native";
+<<<<<<< HEAD
 import { colors, shared, spacing, font, radius } from "../styles/Globaltheme";
+=======
+import { colors, shared, spacing, font, radius } from "../styles/theme";
+>>>>>>> bde9bfa08138ad909d6680ffafd4d5a2bbf04f20
 import { RootStackParamList } from "../types/navigation";
 
 type Nav = NavigationProp<RootStackParamList>;
