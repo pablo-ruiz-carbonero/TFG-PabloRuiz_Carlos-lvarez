@@ -20,19 +20,28 @@ import {
 } from "@react-navigation/native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 
-import { colors, shared, spacing, font, radius } from "../../styles/Globaltheme";
+import {
+  colors,
+  shared,
+  spacing,
+  font,
+  radius,
+} from "../../styles/Globaltheme";
 import { RootStackParamList } from "../../types/navigation";
-import { CreateTaskDto, TaskType } from "../../features/crops/types/crops.types";
+import {
+  CreateTaskDto,
+  TaskType,
+} from "../../features/crops/types/crops.types";
 import { useCropDetail } from "../../features/crops/hooks/useCropDetail";
 
 type Nav = NavigationProp<RootStackParamList>;
 type RouteP = RouteProp<RootStackParamList, "NewTask">;
 
 const TASK_TYPES: { type: TaskType; icon: string; label: string }[] = [
-  { type: "Siembra",      icon: "🌱", label: "Siembra" },
-  { type: "Riego",        icon: "💧", label: "Riego" },
-  { type: "Fertilización",icon: "🧪", label: "Fertilización" },
-  { type: "Cosecha",      icon: "🌾", label: "Cosecha" },
+  { type: "Siembra", icon: "🌱", label: "Siembra" },
+  { type: "Riego", icon: "💧", label: "Riego" },
+  { type: "Fertilización", icon: "🧪", label: "Fertilización" },
+  { type: "Cosecha", icon: "🌾", label: "Cosecha" },
 ];
 
 const UNITS = ["Litros", "kg", "g", "ml", "unidades"];
@@ -40,11 +49,13 @@ const UNITS = ["Litros", "kg", "g", "ml", "unidades"];
 export default function NewTask() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<RouteP>();
-  const { cropId } = route.params;
+  const { cropId, preselect } = route.params;
 
   const { addTask, loading } = useCropDetail(cropId);
 
-  const [taskType, setTaskType] = useState<TaskType>("Riego");
+  const [taskType, setTaskType] = useState<TaskType>(
+    (preselect as TaskType) ?? "Riego",
+  );
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [time, setTime] = useState(new Date());
@@ -271,10 +282,7 @@ export default function NewTask() {
             <Text style={shared.btnOutlineText}>Cancelar</Text>
           </Pressable>
           <Pressable
-            style={[
-              shared.btnPrimary,
-              { flex: 1, opacity: loading ? 0.7 : 1 },
-            ]}
+            style={[shared.btnPrimary, { flex: 1, opacity: loading ? 0.7 : 1 }]}
             onPress={handleSubmit}
             disabled={loading}
           >
@@ -297,7 +305,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.lg,
   },
-  backBtn: { color: colors.primary, fontSize: font.md, fontWeight: "600", width: 60 },
+  backBtn: {
+    color: colors.primary,
+    fontSize: font.md,
+    fontWeight: "600",
+    width: 60,
+  },
   headerTitle: {
     fontSize: font.lg,
     fontWeight: "800",
@@ -345,13 +358,21 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 4,
   },
-  dateBtnValue: { fontSize: font.md, color: colors.textPrimary, fontWeight: "700" },
+  dateBtnValue: {
+    fontSize: font.md,
+    color: colors.textPrimary,
+    fontWeight: "700",
+  },
   toggleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  toggleLabel: { fontSize: font.sm, color: colors.textSecond, fontWeight: "600" },
+  toggleLabel: {
+    fontSize: font.sm,
+    color: colors.textSecond,
+    fontWeight: "600",
+  },
   toggle: {
     width: 44,
     height: 24,

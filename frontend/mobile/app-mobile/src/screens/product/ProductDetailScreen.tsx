@@ -1,6 +1,6 @@
 // src/screens/product/ProductDetailScreen.tsx
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,11 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  Image,
+  FlatList,
+  Dimensions,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -31,6 +36,9 @@ import { useChat } from "../../features/chat/hooks/useChat";
 type RouteP = RouteProp<RootStackParamList, "ProductDetailScreen">;
 type Nav = NavigationProp<RootStackParamList>;
 
+const SCREEN_WIDTH = Dimensions.get("window").width;
+const GALLERY_HEIGHT = 260;
+
 const CATEGORY_EMOJI: Record<string, string> = {
   Semillas: "🌱",
   Fertilizantes: "🧪",
@@ -51,6 +59,130 @@ function Stars({ rating }: { rating: number }) {
   );
 }
 
+// ─── Carrusel de fotos ─────────────────────────────────────────────────────────
+function ImageCarousel({
+  images,
+  category,
+}: {
+  images: string[];
+  category: string;
+}) {
+  const [activeIdx, setActiveIdx] = useState(0);
+
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+    setActiveIdx(idx);
+  };
+
+  if (!images || images.length === 0) {
+    return (
+      <View style={carouselStyles.placeholder}>
+        <Text style={carouselStyles.placeholderEmoji}>
+          {CATEGORY_EMOJI[category] ?? "📦"}
+        </Text>
+        <Text style={carouselStyles.placeholderText}>Sin fotos</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={carouselStyles.container}>
+      <FlatList
+        data={images}
+        keyExtractor={(_, i) => String(i)}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        renderItem={({ item }) => (
+          <Image
+            source={{ uri: item }}
+            style={carouselStyles.image}
+            resizeMode="cover"
+          />
+        )}
+      />
+      {/* Indicadores de punto */}
+      {images.length > 1 && (
+        <View style={carouselStyles.dotsRow}>
+          {images.map((_, i) => (
+            <View
+              key={i}
+              style={[
+                carouselStyles.dot,
+                i === activeIdx && carouselStyles.dotActive,
+              ]}
+            />
+          ))}
+        </View>
+      )}
+      {/* Contador de fotos */}
+      <View style={carouselStyles.counter}>
+        <Text style={carouselStyles.counterText}>
+          {activeIdx + 1}/{images.length}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+const carouselStyles = StyleSheet.create({
+  container: {
+    height: GALLERY_HEIGHT,
+    position: "relative",
+    backgroundColor: colors.primaryDim,
+  },
+  image: {
+    width: SCREEN_WIDTH,
+    height: GALLERY_HEIGHT,
+  },
+  placeholder: {
+    height: GALLERY_HEIGHT,
+    backgroundColor: colors.primaryDim,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+  },
+  placeholderEmoji: { fontSize: 70 },
+  placeholderText: {
+    fontSize: font.sm,
+    color: colors.textMuted,
+    fontWeight: "600",
+  },
+  dotsRow: {
+    position: "absolute",
+    bottom: spacing.md,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: spacing.xs,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "rgba(255,255,255,0.5)",
+  },
+  dotActive: {
+    backgroundColor: colors.white,
+    width: 18,
+    borderRadius: 3,
+  },
+  counter: {
+    position: "absolute",
+    top: spacing.md,
+    right: spacing.md,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.md,
+  },
+  counterText: { color: colors.white, fontSize: font.xs, fontWeight: "700" },
+});
+
+// ─── Pantalla principal ────────────────────────────────────────────────────────
 export default function ProductDetailScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<RouteP>();
@@ -116,7 +248,7 @@ export default function ProductDetailScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
+        {/* Header flotante sobre el carrusel */}
         <View style={styles.header}>
           <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
             <Text style={styles.backButton}>← Volver</Text>
@@ -127,15 +259,8 @@ export default function ProductDetailScreen() {
           <View style={{ width: 60 }} />
         </View>
 
-        {/* Galería placeholder */}
-        <View style={styles.gallery}>
-          <Text style={styles.galleryEmoji}>
-            {CATEGORY_EMOJI[product.category] ?? "📦"}
-          </Text>
-          <View style={styles.galleryBadge}>
-            <Text style={styles.galleryBadgeText}>Galería de fotos</Text>
-          </View>
-        </View>
+        {/* Carrusel de fotos */}
+        <ImageCarousel images={product.images} category={product.category} />
 
         {/* Título y precio */}
         <View style={styles.mainInfo}>
@@ -197,7 +322,6 @@ export default function ProductDetailScreen() {
 
         {/* Acciones */}
         <View style={styles.actionButtons}>
-          {/* ✅ Ahora abre el chat real con el vendedor */}
           <Pressable
             style={({ pressed }) => [
               styles.btnContact,
@@ -259,35 +383,11 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "center",
   },
-  gallery: {
-    height: 200,
-    backgroundColor: colors.primaryDim,
-    alignItems: "center",
-    justifyContent: "center",
-    marginHorizontal: spacing.lg,
-    borderRadius: radius.lg,
-    marginBottom: spacing.lg,
-    position: "relative",
-  },
-  galleryEmoji: { fontSize: 70 },
-  galleryBadge: {
-    position: "absolute",
-    bottom: spacing.md,
-    right: spacing.md,
-    backgroundColor: "rgba(0,0,0,0.3)",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.md,
-  },
-  galleryBadgeText: {
-    color: colors.white,
-    fontSize: font.xs,
-    fontWeight: "600",
-  },
   mainInfo: {
     flexDirection: "row",
     alignItems: "flex-start",
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
     marginBottom: spacing.md,
   },
   productName: {

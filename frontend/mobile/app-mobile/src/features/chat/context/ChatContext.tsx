@@ -17,7 +17,7 @@ import {
 } from "../api/chatApi";
 
 const MY_ID = "me";
-const isDev = () => __DEV__ && !process.env.EXPO_PUBLIC_API_URL?.includes("http");
+const isDevMode = () => __DEV__ && process.env.EXPO_PUBLIC_USE_MOCK === "true";
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -43,7 +43,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
   const fetchConversations = useCallback(async () => {
     setLoadingConversations(true);
     try {
-      const data = isDev()
+      const data = isDevMode()
         ? await loadConversations()
         : await getConversationsRequest();
       setConversations(data);
@@ -55,7 +55,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const getMessages = async (convId: string): Promise<ChatMessage[]> => {
-    if (isDev()) return loadMessages(convId);
+    if (isDevMode()) return loadMessages(convId);
     return getMessagesRequest(convId);
   };
 
@@ -63,7 +63,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
     convId: string,
     text: string
   ): Promise<ChatMessage> => {
-    if (isDev()) {
+    if (isDevMode()) {
       const msgs = await loadMessages(convId);
       const newMsg: ChatMessage = {
         id: `m_${Date.now()}`,
@@ -83,7 +83,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const markAsRead = async (convId: string): Promise<void> => {
-    if (isDev()) {
+    if (isDevMode()) {
       const convs = await loadConversations();
       const updated = convs.map((c) =>
         c.id === convId ? { ...c, unreadCount: 0 } : c
@@ -104,7 +104,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
   const getOrCreateConversation = async (
     dto: CreateConversationDto
   ): Promise<ChatConversation> => {
-    if (isDev()) {
+    if (isDevMode()) {
       const convs = await loadConversations();
       const existing = convs.find((c) => c.participantId === dto.participantId);
       if (existing) return existing;

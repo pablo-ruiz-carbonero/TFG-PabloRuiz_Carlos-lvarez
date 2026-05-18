@@ -1,6 +1,6 @@
 // src/screens/DetailCorpScreen.tsx
 
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -18,10 +19,21 @@ import {
   NavigationProp,
   useFocusEffect,
 } from "@react-navigation/native";
-import { colors, shared, spacing, font, radius } from "../../styles/Globaltheme";
+import {
+  colors,
+  shared,
+  spacing,
+  font,
+  radius,
+} from "../../styles/Globaltheme";
 import { RootStackParamList } from "../../types/navigation";
-import { Task, TaskType } from "../../features/crops/types/crops.types";
+import {
+  Task,
+  TaskType,
+  CropPhase,
+} from "../../features/crops/types/crops.types";
 import { useCropDetail } from "../../features/crops/hooks/useCropDetail";
+import { useCrops } from "../../features/crops/hooks/useCrops";
 
 type RouteP = RouteProp<RootStackParamList, "DetailCorpScreen">;
 type Nav = NavigationProp<RootStackParamList>;
@@ -31,6 +43,23 @@ const TASK_ICON: Record<TaskType, string> = {
   Riego: "💧",
   Fertilización: "🧪",
   Cosecha: "🌾",
+};
+
+// Fases en orden de ciclo de vida
+const PHASES: CropPhase[] = [
+  "Plántula",
+  "Crecimiento",
+  "Floración",
+  "Maduración",
+  "Cosecha",
+];
+
+const PHASE_COLOR: Record<CropPhase, string> = {
+  Plántula: "#4ade80",
+  Crecimiento: "#22c55e",
+  Floración: "#f59e0b",
+  Maduración: "#ef4444",
+  Cosecha: "#6366f1",
 };
 
 const fmt = (iso?: string, opts?: Intl.DateTimeFormatOptions) =>
@@ -52,6 +81,9 @@ export default function DetailCorpScreen() {
     removeTask,
     removeCrop,
   } = useCropDetail(cropId);
+
+  const { updateCrop } = useCrops();
+  const [showPhaseModal, setShowPhaseModal] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -88,6 +120,21 @@ export default function DetailCorpScreen() {
     );
   };
 
+  const handleChangePhase = async (phase: CropPhase) => {
+    setShowPhaseModal(false);
+    if (!crop || crop.currentPhase === phase) return;
+    try {
+      await updateCrop(cropId, { currentPhase: phase });
+    } catch {
+      Alert.alert("Error", "No se pudo cambiar la fase.");
+    }
+  };
+
+  // Navega a NewTask con tipo pre-seleccionado
+  const goToNewTask = (preselect?: TaskType) => {
+    navigation.navigate("NewTask", { cropId, preselect });
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={shared.screen}>
@@ -116,6 +163,8 @@ export default function DetailCorpScreen() {
     );
   }
 
+  const phaseIndex = PHASES.indexOf(crop.currentPhase);
+
   return (
     <SafeAreaView style={shared.screen}>
       <ScrollView
@@ -127,9 +176,23 @@ export default function DetailCorpScreen() {
           <Pressable onPress={() => navigation.goBack()}>
             <Text style={styles.backBtn}>← Volver</Text>
           </Pressable>
-          <View style={styles.phaseBadge}>
-            <Text style={styles.phaseBadgeText}>{crop.currentPhase}</Text>
-          </View>
+          {/* Fase — toca para cambiarla */}
+          <Pressable
+            style={[
+              styles.phaseBadge,
+              { backgroundColor: PHASE_COLOR[crop.currentPhase] + "22" },
+            ]}
+            onPress={() => setShowPhaseModal(true)}
+          >
+            <Text
+              style={[
+                styles.phaseBadgeText,
+                { color: PHASE_COLOR[crop.currentPhase] },
+              ]}
+            >
+              {crop.currentPhase} ✎
+            </Text>
+          </Pressable>
         </View>
 
         {/* Title card */}
@@ -139,6 +202,45 @@ export default function DetailCorpScreen() {
           <View style={styles.typeTag}>
             <Text style={styles.typeTagText}>{crop.cropType}</Text>
           </View>
+        </View>
+
+        {/* Barra de progreso de fase */}
+        <View style={[shared.card, styles.phaseProgress]}>
+          <Text style={styles.phaseProgressTitle}>Progreso del ciclo</Text>
+          <View style={styles.phaseTrack}>
+            {PHASES.map((p, idx) => (
+              <View key={p} style={styles.phaseStepWrapper}>
+                <Pressable
+                  style={[
+                    styles.phaseStep,
+                    idx <= phaseIndex && {
+                      backgroundColor: PHASE_COLOR[p],
+                      borderColor: PHASE_COLOR[p],
+                    },
+                  ]}
+                  onPress={() => setShowPhaseModal(true)}
+                >
+                  {idx < phaseIndex && (
+                    <Text style={styles.phaseStepTick}>✓</Text>
+                  )}
+                  {idx === phaseIndex && <View style={styles.phaseStepDot} />}
+                </Pressable>
+                <Text
+                  style={[
+                    styles.phaseStepLabel,
+                    idx === phaseIndex && {
+                      color: PHASE_COLOR[p],
+                      fontWeight: "700",
+                    },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {p}
+                </Text>
+              </View>
+            ))}
+          </View>
+          <Text style={styles.phaseHint}>Toca la fase para cambiarla</Text>
         </View>
 
         {/* Stats */}
@@ -178,10 +280,7 @@ export default function DetailCorpScreen() {
         <Section
           title="📋 Tareas pendientes"
           action={
-            <Pressable
-              style={styles.btnAddTask}
-              onPress={() => navigation.navigate("NewTask", { cropId })}
-            >
+            <Pressable style={styles.btnAddTask} onPress={() => goToNewTask()}>
               <Text style={styles.btnAddTaskText}>+ Nueva</Text>
             </Pressable>
           }
@@ -241,14 +340,14 @@ export default function DetailCorpScreen() {
           </View>
           <Pressable
             style={[shared.btnPrimary, { marginTop: spacing.md }]}
-            onPress={() => navigation.navigate("NewTask", { cropId })}
+            onPress={() => goToNewTask("Riego")}
           >
-            <Text style={shared.btnPrimaryText}>Registrar riego</Text>
+            <Text style={shared.btnPrimaryText}>💧 Registrar riego</Text>
           </Pressable>
         </Section>
 
         {/* Fertilization */}
-        <Section title="🌱 Fertilización">
+        <Section title="🧪 Fertilización">
           <View style={styles.infoRow}>
             <View>
               <Text style={styles.infoLabel}>Última fertilización</Text>
@@ -269,9 +368,11 @@ export default function DetailCorpScreen() {
           </View>
           <Pressable
             style={[shared.btnPrimary, { marginTop: spacing.md }]}
-            onPress={() => navigation.navigate("NewTask", { cropId })}
+            onPress={() => goToNewTask("Fertilización")}
           >
-            <Text style={shared.btnPrimaryText}>Registrar fertilización</Text>
+            <Text style={shared.btnPrimaryText}>
+              🧪 Registrar fertilización
+            </Text>
           </Pressable>
         </Section>
 
@@ -309,6 +410,68 @@ export default function DetailCorpScreen() {
           </Pressable>
         </View>
       </ScrollView>
+
+      {/* Modal selector de fase */}
+      <Modal
+        visible={showPhaseModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPhaseModal(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setShowPhaseModal(false)}
+        >
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Cambiar fase del cultivo</Text>
+            <Text style={styles.modalSubtitle}>
+              Las fases siguen el ciclo natural de la planta. Puedes avanzar o
+              retroceder manualmente según lo que observes en el campo.
+            </Text>
+            {PHASES.map((phase) => (
+              <Pressable
+                key={phase}
+                style={[
+                  styles.phaseOption,
+                  crop.currentPhase === phase && {
+                    backgroundColor: PHASE_COLOR[phase] + "22",
+                    borderColor: PHASE_COLOR[phase],
+                  },
+                ]}
+                onPress={() => handleChangePhase(phase)}
+              >
+                <View
+                  style={[
+                    styles.phaseOptionDot,
+                    { backgroundColor: PHASE_COLOR[phase] },
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.phaseOptionText,
+                    crop.currentPhase === phase && {
+                      color: PHASE_COLOR[phase],
+                      fontWeight: "700",
+                    },
+                  ]}
+                >
+                  {phase}
+                </Text>
+                {crop.currentPhase === phase && (
+                  <Text
+                    style={[
+                      styles.phaseOptionCheck,
+                      { color: PHASE_COLOR[phase] },
+                    ]}
+                  >
+                    ✓ Actual
+                  </Text>
+                )}
+              </Pressable>
+            ))}
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -445,14 +608,14 @@ const styles = StyleSheet.create({
   },
   backBtn: { color: colors.primary, fontSize: font.md, fontWeight: "600" },
   phaseBadge: {
-    backgroundColor: colors.primaryDim,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: "transparent",
   },
   phaseBadgeText: {
-    color: colors.primary,
-    fontWeight: "600",
+    fontWeight: "700",
     fontSize: font.sm,
   },
   titleCard: { marginHorizontal: spacing.lg, marginBottom: spacing.lg },
@@ -480,6 +643,57 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontWeight: "600",
     fontSize: font.sm,
+  },
+  // ── Barra de progreso de fase
+  phaseProgress: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+    padding: spacing.md,
+  },
+  phaseProgressTitle: {
+    fontSize: font.sm,
+    fontWeight: "700",
+    color: colors.textSecond,
+    marginBottom: spacing.md,
+  },
+  phaseTrack: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  phaseStepWrapper: {
+    flex: 1,
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  phaseStep: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  phaseStepTick: { color: colors.white, fontSize: 13, fontWeight: "800" },
+  phaseStepDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.white,
+  },
+  phaseStepLabel: {
+    fontSize: 9,
+    color: colors.textMuted,
+    textAlign: "center",
+    fontWeight: "600",
+  },
+  phaseHint: {
+    fontSize: font.xs,
+    color: colors.textMuted,
+    textAlign: "center",
+    marginTop: spacing.sm,
   },
   statsRow: {
     flexDirection: "row",
@@ -643,5 +857,56 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: font.sm,
     paddingLeft: spacing.sm,
+  },
+  // ── Modal de fase
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
+  },
+  modalCard: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    padding: spacing.xl,
+    paddingBottom: spacing.xxxl,
+  },
+  modalTitle: {
+    fontSize: font.lg,
+    fontWeight: "800",
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  modalSubtitle: {
+    fontSize: font.sm,
+    color: colors.textSecond,
+    lineHeight: 20,
+    marginBottom: spacing.lg,
+  },
+  phaseOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    marginBottom: spacing.sm,
+  },
+  phaseOptionDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+  },
+  phaseOptionText: {
+    flex: 1,
+    fontSize: font.md,
+    fontWeight: "600",
+    color: colors.textPrimary,
+  },
+  phaseOptionCheck: {
+    fontSize: font.xs,
+    fontWeight: "700",
   },
 });

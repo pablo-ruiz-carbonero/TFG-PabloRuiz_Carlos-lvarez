@@ -1,8 +1,8 @@
 // src/screens/WeatherScreen.tsx
 // ─────────────────────────────────────────────────────────────────────────────
-// Estructura completa lista para conectar a OpenWeatherMap u otra API.
-// Busca los comentarios "TODO (API)" para ver qué hay que reemplazar.
+// Pantalla completa de clima conectada a WeatherContext + OpenWeatherMap
 // ─────────────────────────────────────────────────────────────────────────────
+
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -15,128 +15,123 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
+
 import { colors, shared, spacing, font, radius } from "../styles/Globaltheme";
 import { RootStackParamList } from "../types/navigation";
+import { useWeather } from "../features/weather/hooks/useWeather";
+import { useWeatherLocation } from "../features/weather/hooks/useWeatherLocation";
+import {
+  AlertSeverity,
+  ForecastDay,
+  WeatherAlert,
+} from "../features/weather/types/weather.types";
 
 type Nav = NavigationProp<RootStackParamList>;
 
-// ── Tipos ─────────────────────────────────────────────────────────────────────
-interface DayForecast {
-  day: string; // "Jue", "Vie"...
-  emoji: string;
-  high: number;
-  low: number;
-}
+// ─── Helpers de color ─────────────────────────────────────────────────────────
 
-interface WeatherAlert {
-  id: string;
-  type: string;
-  description: string;
-  severity: "low" | "medium" | "high";
-}
-
-interface WeatherData {
-  city: string;
-  country: string;
-  temp: number;
-  feelsLike: number;
-  condition: string;
-  conditionEmoji: string;
-  humidity: number;
-  windSpeed: number;
-  forecast: DayForecast[];
-  alerts: WeatherAlert[];
-}
-
-// ── Mock (reemplazar por llamada real) ────────────────────────────────────────
-const MOCK_WEATHER: WeatherData = {
-  city: "Almería",
-  country: "España",
-  temp: 22,
-  feelsLike: 20,
-  condition: "Soleado",
-  conditionEmoji: "☀️",
-  humidity: 45,
-  windSpeed: 12,
-  forecast: [
-    { day: "Jue", emoji: "⛅", high: 24, low: 15 },
-    { day: "Vie", emoji: "🌤️", high: 21, low: 14 },
-    { day: "Sáb", emoji: "🌧️", high: 17, low: 13 },
-    { day: "Dom", emoji: "⛅", high: 19, low: 12 },
-    { day: "Lun", emoji: "☀️", high: 23, low: 14 },
-  ],
-  alerts: [
-    {
-      id: "a1",
-      type: "Riesgo de helada",
-      description: "Sábado por la noche · T mín: 2°C",
-      severity: "high",
-    },
-  ],
-};
-
-// TODO (API): reemplazar esta función por fetch a OpenWeatherMap
-// const API_KEY = process.env.EXPO_PUBLIC_OWM_KEY;
-// async function fetchWeather(city: string): Promise<WeatherData> {
-//   const res = await fetch(
-//     `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${API_KEY}&units=metric&lang=es`
-//   );
-//   const json = await res.json();
-//   return mapOwmToWeatherData(json); // mapear al formato WeatherData
-// }
-
-async function fetchWeatherMock(city: string): Promise<WeatherData> {
-  await new Promise((r) => setTimeout(r, 700));
-  return { ...MOCK_WEATHER, city };
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-const alertColor: Record<string, string> = {
+const alertColor: Record<AlertSeverity, string> = {
   low: colors.info,
   medium: colors.warning,
   high: colors.error,
 };
-const alertBg: Record<string, string> = {
+const alertBg: Record<AlertSeverity, string> = {
   low: colors.infoDim,
   medium: colors.warningDim,
   high: colors.errorDim,
 };
 
-// ── Componente ────────────────────────────────────────────────────────────────
+// ─── Sub-componentes ──────────────────────────────────────────────────────────
+
+function ForecastItem({ day }: { day: ForecastDay }) {
+  return (
+    <View style={styles.forecastDay}>
+      <Text style={styles.forecastDayName}>{day.dayLabel}</Text>
+      <Text style={styles.forecastEmoji}>{day.emoji}</Text>
+      <Text style={styles.forecastHigh}>{day.high}°</Text>
+      <Text style={styles.forecastLow}>{day.low}°</Text>
+    </View>
+  );
+}
+
+function AlertItem({ alert }: { alert: WeatherAlert }) {
+  return (
+    <View
+      style={[
+        styles.alertItem,
+        { backgroundColor: alertBg[alert.severity] ?? colors.warningDim },
+      ]}
+    >
+      <View
+        style={[
+          styles.alertDot,
+          { backgroundColor: alertColor[alert.severity] },
+        ]}
+      />
+      <View style={styles.alertContent}>
+        <Text style={[styles.alertType, { color: alertColor[alert.severity] }]}>
+          {alert.type}
+        </Text>
+        <Text style={styles.alertDesc}>{alert.description}</Text>
+      </View>
+    </View>
+  );
+}
+
+function StatBox({
+  icon,
+  label,
+  value,
+}: {
+  icon: string;
+  label: string;
+  value: string;
+}) {
+  return (
+    <View style={styles.statBox}>
+      <Text style={styles.statIcon}>{icon}</Text>
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
+// ─── Pantalla principal ───────────────────────────────────────────────────────
+
 export default function WeatherScreen() {
   const navigation = useNavigation<Nav>();
-  const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [loading, setLoading] = useState(true);
+
+  const {
+    weatherData,
+    currentCity,
+    loading,
+    error,
+    fetchWeatherByCity,
+    clearError,
+  } = useWeather();
+
+  const { locating, locationError, requestLocation } = useWeatherLocation();
+
   const [locationInput, setLocationInput] = useState("");
   const [editingLocation, setEditingLocation] = useState(false);
-  const [currentCity, setCurrentCity] = useState("Almería");
-  const [error, setError] = useState("");
 
+  // Carga inicial: si no hay datos, busca la última ciudad o Sevilla por defecto
   useEffect(() => {
-    loadWeather(currentCity);
+    if (!weatherData) {
+      fetchWeatherByCity(currentCity || "Sevilla");
+    }
   }, []);
 
-  const loadWeather = async (city: string) => {
-    try {
-      setLoading(true);
-      setError("");
-      // TODO (API): cambiar fetchWeatherMock por fetchWeather cuando la API esté lista
-      const data = await fetchWeatherMock(city);
-      setWeather(data);
-      setCurrentCity(city);
-    } catch {
-      setError("No se pudo obtener el clima. Comprueba la ciudad.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleChangeLocation = () => {
+  const handleSearch = () => {
     if (!locationInput.trim()) return;
     setEditingLocation(false);
-    loadWeather(locationInput.trim());
+    fetchWeatherByCity(locationInput.trim());
     setLocationInput("");
   };
+
+  const isLoading = loading || locating;
+  const displayError = error || locationError;
+  const current = weatherData?.current;
 
   return (
     <SafeAreaView style={shared.screen}>
@@ -144,7 +139,7 @@ export default function WeatherScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
+        {/* ── Header ─────────────────────────────────────────────────────── */}
         <View style={styles.header}>
           <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
             <Text style={styles.backButton}>← Volver</Text>
@@ -153,7 +148,7 @@ export default function WeatherScreen() {
           <View style={{ width: 60 }} />
         </View>
 
-        {/* Selector de ubicación */}
+        {/* ── Selector de ubicación ──────────────────────────────────────── */}
         <View style={[shared.card, styles.locationCard]}>
           {editingLocation ? (
             <View style={styles.locationEditRow}>
@@ -165,118 +160,128 @@ export default function WeatherScreen() {
                 onChangeText={setLocationInput}
                 autoFocus
                 returnKeyType="search"
-                onSubmitEditing={handleChangeLocation}
+                onSubmitEditing={handleSearch}
               />
-              <Pressable
-                style={styles.btnSearch}
-                onPress={handleChangeLocation}
-              >
+              <Pressable style={styles.btnSearch} onPress={handleSearch}>
                 <Text style={styles.btnSearchText}>Buscar</Text>
               </Pressable>
             </View>
           ) : (
-            <Pressable
-              style={styles.locationRow}
-              onPress={() => setEditingLocation(true)}
-            >
-              <Text style={styles.locationText}>📍 {currentCity}</Text>
-              <Text style={styles.locationChange}>Cambiar ubicación...</Text>
-            </Pressable>
+            <View style={styles.locationRow}>
+              <Pressable
+                style={styles.locationRowLeft}
+                onPress={() => setEditingLocation(true)}
+              >
+                <Text style={styles.locationText}>
+                  📍 {(current?.city ?? currentCity) || "..."}
+                  {current?.country ? `, ${current.country}` : ""}
+                </Text>
+                <Text style={styles.locationChange}>Cambiar ubicación →</Text>
+              </Pressable>
+              <Pressable
+                style={styles.gpsBtn}
+                onPress={requestLocation}
+                disabled={locating}
+              >
+                <Text style={styles.gpsBtnText}>{locating ? "..." : "🎯"}</Text>
+              </Pressable>
+            </View>
           )}
         </View>
 
-        {loading ? (
+        {/* ── Estados: loading / error / datos ──────────────────────────── */}
+        {isLoading ? (
           <View style={styles.center}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.loadingText}>Cargando clima...</Text>
           </View>
-        ) : error ? (
+        ) : displayError ? (
           <View style={styles.center}>
             <Text style={styles.errorEmoji}>⚠️</Text>
-            <Text style={styles.errorText}>{error}</Text>
+            <Text style={styles.errorText}>{displayError}</Text>
             <Pressable
               style={styles.retryBtn}
-              onPress={() => loadWeather(currentCity)}
+              onPress={() => {
+                clearError();
+                fetchWeatherByCity(currentCity || "Sevilla");
+              }}
             >
               <Text style={styles.retryBtnText}>Reintentar</Text>
             </Pressable>
           </View>
-        ) : weather ? (
+        ) : current ? (
           <>
-            {/* Temperatura principal */}
+            {/* ── Temperatura principal ─────────────────────────────────── */}
             <View style={[shared.card, styles.mainCard]}>
-              <Text style={styles.cityName}>
-                {weather.city}, {weather.country}
-              </Text>
-              <Text style={styles.mainTemp}>{weather.temp}°C</Text>
+              <Text style={styles.mainTemp}>{current.temp}°C</Text>
               <View style={styles.conditionBadge}>
                 <Text style={styles.conditionEmoji}>
-                  {weather.conditionEmoji}
+                  {current.conditionEmoji}
                 </Text>
-                <Text style={styles.conditionText}>{weather.condition}</Text>
+                <Text style={styles.conditionText}>{current.condition}</Text>
               </View>
               <Text style={styles.feelsLike}>
-                Humedad {weather.humidity}% · Viento {weather.windSpeed} km/h
+                Sensación {current.feelsLike}°C · Mín {current.tempMin}° / Máx{" "}
+                {current.tempMax}°
               </Text>
             </View>
 
-            {/* Previsión 5 días */}
-            <View style={[shared.card, styles.section]}>
-              <Text style={shared.sectionTitle}>Próximos 5 días</Text>
-              <View style={styles.forecastRow}>
-                {weather.forecast.map((day) => (
-                  <View key={day.day} style={styles.forecastDay}>
-                    <Text style={styles.forecastDayName}>{day.day}</Text>
-                    <Text style={styles.forecastEmoji}>{day.emoji}</Text>
-                    <Text style={styles.forecastHigh}>{day.high}°</Text>
-                    <Text style={styles.forecastLow}>{day.low}°</Text>
-                  </View>
-                ))}
-              </View>
+            {/* ── Stats secundarias ─────────────────────────────────────── */}
+            <View style={[shared.card, styles.statsCard]}>
+              <StatBox
+                icon="💧"
+                label="Humedad"
+                value={`${current.humidity}%`}
+              />
+              <View style={styles.statDivider} />
+              <StatBox
+                icon="💨"
+                label="Viento"
+                value={`${current.windSpeed} km/h`}
+              />
+              <View style={styles.statDivider} />
+              <StatBox
+                icon="👁️"
+                label="Visib."
+                value={`${current.visibility} km`}
+              />
+              <View style={styles.statDivider} />
+              <StatBox icon="🌅" label="Amanecer" value={current.sunrise} />
+              <View style={styles.statDivider} />
+              <StatBox icon="🌇" label="Atardecer" value={current.sunset} />
             </View>
 
-            {/* Alertas agrícolas */}
-            {weather.alerts.length > 0 && (
+            {/* ── Previsión 5 días ──────────────────────────────────────── */}
+            {weatherData!.forecast.length > 0 && (
+              <View style={[shared.card, styles.section]}>
+                <Text style={shared.sectionTitle}>Próximos 5 días</Text>
+                <View style={styles.forecastRow}>
+                  {weatherData!.forecast.map((day) => (
+                    <ForecastItem key={day.date} day={day} />
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* ── Alertas agrícolas ─────────────────────────────────────── */}
+            {weatherData!.alerts.length > 0 && (
               <View style={[shared.card, styles.section]}>
                 <Text style={shared.sectionTitle}>Alertas agrícolas</Text>
-                {weather.alerts.map((alert) => (
-                  <View
-                    key={alert.id}
-                    style={[
-                      styles.alertItem,
-                      {
-                        backgroundColor:
-                          alertBg[alert.severity] ?? colors.warningDim,
-                      },
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.alertDot,
-                        { backgroundColor: alertColor[alert.severity] },
-                      ]}
-                    />
-                    <View style={styles.alertContent}>
-                      <Text
-                        style={[
-                          styles.alertType,
-                          { color: alertColor[alert.severity] },
-                        ]}
-                      >
-                        {alert.type}
-                      </Text>
-                      <Text style={styles.alertDesc}>{alert.description}</Text>
-                    </View>
-                  </View>
+                {weatherData!.alerts.map((alert) => (
+                  <AlertItem key={alert.id} alert={alert} />
                 ))}
               </View>
             )}
 
-            {/* Nota API */}
-            <View style={styles.apiNote}>
-              <Text style={styles.apiNoteText}>
-                🔌 Datos de ejemplo · Conecta tu API key en weatherService para
-                datos reales
+            {/* ── Timestamp de actualización ───────────────────────────── */}
+            <View style={styles.updatedNote}>
+              <Text style={styles.updatedText}>
+                🔄 Actualizado{" "}
+                {new Date(current.fetchedAt).toLocaleTimeString("es-ES", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}{" "}
+                · Fuente: OpenWeatherMap
               </Text>
             </View>
           </>
@@ -286,8 +291,12 @@ export default function WeatherScreen() {
   );
 }
 
+// ─── Estilos ──────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   scrollContent: { paddingBottom: spacing.xxxl },
+
+  // Header
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -307,12 +316,17 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
 
-  locationCard: { marginHorizontal: spacing.lg, marginBottom: spacing.md },
+  // Location selector
+  locationCard: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+  },
   locationRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
+  locationRowLeft: { flex: 1 },
   locationText: {
     fontSize: font.md,
     fontWeight: "700",
@@ -322,6 +336,7 @@ const styles = StyleSheet.create({
     fontSize: font.sm,
     color: colors.primary,
     fontWeight: "600",
+    marginTop: 2,
   },
   locationEditRow: { flexDirection: "row", gap: spacing.sm },
   locationInput: {
@@ -342,8 +357,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  btnSearchText: { color: colors.white, fontWeight: "700", fontSize: font.sm },
+  btnSearchText: {
+    color: colors.white,
+    fontWeight: "700",
+    fontSize: font.sm,
+  },
+  gpsBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryDim,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: spacing.sm,
+  },
+  gpsBtnText: { fontSize: 18 },
 
+  // Loading / error
   center: {
     flex: 1,
     alignItems: "center",
@@ -367,17 +397,12 @@ const styles = StyleSheet.create({
   },
   retryBtnText: { color: colors.white, fontWeight: "700", fontSize: font.md },
 
+  // Main card
   mainCard: {
     marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
     alignItems: "center",
     paddingVertical: spacing.xxl,
-  },
-  cityName: {
-    fontSize: font.md,
-    color: colors.textSecond,
-    fontWeight: "600",
-    marginBottom: spacing.sm,
   },
   mainTemp: {
     fontSize: 72,
@@ -407,6 +432,34 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
 
+  // Stats
+  statsCard: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: spacing.md,
+  },
+  statBox: { flex: 1, alignItems: "center", gap: 3 },
+  statIcon: { fontSize: 18 },
+  statValue: {
+    fontSize: font.sm,
+    fontWeight: "800",
+    color: colors.textPrimary,
+  },
+  statLabel: {
+    fontSize: font.xs,
+    color: colors.textMuted,
+    fontWeight: "600",
+  },
+  statDivider: {
+    width: 1,
+    height: 36,
+    backgroundColor: colors.border,
+  },
+
+  // Forecast
   section: { marginHorizontal: spacing.lg, marginBottom: spacing.md },
   forecastRow: {
     flexDirection: "row",
@@ -427,6 +480,7 @@ const styles = StyleSheet.create({
   },
   forecastLow: { fontSize: font.xs, color: colors.textMuted },
 
+  // Alerts
   alertItem: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -440,12 +494,18 @@ const styles = StyleSheet.create({
   alertType: { fontSize: font.sm, fontWeight: "700" },
   alertDesc: { fontSize: font.xs, color: colors.textSecond, marginTop: 2 },
 
-  apiNote: {
+  // Updated note
+  updatedNote: {
     marginHorizontal: spacing.lg,
     marginTop: spacing.sm,
     padding: spacing.md,
-    backgroundColor: colors.infoDim,
+    backgroundColor: colors.primaryDim,
     borderRadius: radius.md,
   },
-  apiNoteText: { fontSize: font.xs, color: colors.info, textAlign: "center" },
+  updatedText: {
+    fontSize: font.xs,
+    color: colors.primary,
+    textAlign: "center",
+    fontWeight: "600",
+  },
 });

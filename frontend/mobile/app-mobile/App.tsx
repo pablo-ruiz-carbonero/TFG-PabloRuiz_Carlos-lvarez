@@ -12,6 +12,7 @@ import { AuthProvider } from "./src/features/auth/context/AuthContext";
 import { CropsProvider } from "./src/features/crops/context/CropsContext";
 import { ChatProvider } from "./src/features/chat/context/ChatContext";
 import { ProductsProvider } from "./src/features/products/context/ProductsContext";
+import { WeatherProvider } from "./src/features/weather/context/weatherContext";
 
 export default function App() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
@@ -34,9 +35,11 @@ export default function App() {
         <CropsProvider>
           <ChatProvider>
             <ProductsProvider>
-              <NavigationContainer>
-                <RootNavigator />
-              </NavigationContainer>
+              <WeatherProvider>
+                <NavigationContainer>
+                  <RootNavigator />
+                </NavigationContainer>
+              </WeatherProvider>
             </ProductsProvider>
           </ChatProvider>
         </CropsProvider>

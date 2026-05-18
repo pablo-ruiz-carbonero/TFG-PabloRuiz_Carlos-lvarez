@@ -8,6 +8,7 @@ import {
   Pressable,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
@@ -68,7 +69,18 @@ export default function ProfileScreen() {
   const { crops } = useCrops();
   const { myProducts } = useProducts();
 
-  if (!user) return null;
+  // ✅ Pantalla de carga en lugar de pantalla en blanco
+  if (!user) {
+    return (
+      <SafeAreaView style={shared.screen}>
+        <View
+          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+        >
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const initials = getUserInitials(user);
 

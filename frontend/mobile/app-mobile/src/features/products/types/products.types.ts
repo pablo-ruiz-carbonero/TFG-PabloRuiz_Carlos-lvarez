@@ -42,6 +42,7 @@ export interface CreateProductDto {
   stock: number;
   description: string;
   province: string;
+  images?: string[];
 }
 
 export interface UpdateProductDto {

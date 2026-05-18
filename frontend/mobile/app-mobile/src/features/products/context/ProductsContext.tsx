@@ -199,8 +199,10 @@ const MOCK_PRODUCTS: Product[] = [
   },
 ];
 
-const isDev = () =>
-  __DEV__ && !process.env.EXPO_PUBLIC_API_URL?.includes("http");
+// ✅ FIX: la condición anterior comprobaba que la URL no tuviese "http",
+// pero .env tiene "http://localhost:3000" → nunca se activaba el mock.
+// Ahora se activa con EXPO_PUBLIC_USE_MOCK=true en el .env.
+const isDev = () => __DEV__ && process.env.EXPO_PUBLIC_USE_MOCK === "true";
 // ─────────────────────────────────────────────────────────────
 
 interface ProductsContextType {
@@ -245,8 +247,16 @@ export const ProductsProvider: React.FC<{ children: React.ReactNode }> = ({
   const fetchProducts = useCallback(async () => {
     await run(async () => {
       if (isDev()) {
-        await new Promise((r) => setTimeout(r, 300)); // simula latencia
-        setProducts([...MOCK_PRODUCTS]);
+        await new Promise((r) => setTimeout(r, 300));
+        // Merge: añade los mocks que no existan ya (evita sobreescribir
+        // productos creados de forma optimista durante la sesión)
+        setProducts((prev) => {
+          const prevIds = new Set(prev.map((p) => p.id));
+          const newMocks = MOCK_PRODUCTS.filter((p) => !prevIds.has(p.id));
+          return prev.length === 0
+            ? [...MOCK_PRODUCTS]
+            : [...prev, ...newMocks];
+        });
         return;
       }
       const data = await getAllProductsRequest();
@@ -299,7 +309,7 @@ export const ProductsProvider: React.FC<{ children: React.ReactNode }> = ({
             sales: 0,
             location: dto.province,
           },
-          images: [],
+          images: dto.images ?? [],
           createdAt: new Date().toISOString().split("T")[0],
         };
         setProducts((prev) => [newProduct, ...prev]);
@@ -319,6 +329,14 @@ export const ProductsProvider: React.FC<{ children: React.ReactNode }> = ({
     dto: UpdateProductDto,
   ): Promise<Product> => {
     return run(async () => {
+      if (isDev()) {
+        const existing = products.find((p) => p.id === id);
+        if (!existing) throw new Error("Producto no encontrado");
+        const updated: Product = { ...existing, ...dto };
+        setProducts((prev) => prev.map((p) => (p.id === id ? updated : p)));
+        setMyProducts((prev) => prev.map((p) => (p.id === id ? updated : p)));
+        return updated;
+      }
       const updated = await updateProductRequest(id, dto);
       setProducts((prev) => prev.map((p) => (p.id === id ? updated : p)));
       setMyProducts((prev) => prev.map((p) => (p.id === id ? updated : p)));
@@ -339,7 +357,6 @@ export const ProductsProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   };
 
-  // Filtros client-side (sin request extra)
   const filterByCategory = (category: ProductCategory | "Todos"): Product[] => {
     if (category === "Todos") return products;
     return products.filter((p) => p.category === category);

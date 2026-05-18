@@ -10,6 +10,7 @@ import {
   FlatList,
   ActivityIndicator,
   ScrollView,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -57,15 +58,26 @@ function ProductCard({
   item: Product;
   onPress: () => void;
 }) {
+  const firstImage =
+    item.images && item.images.length > 0 ? item.images[0] : null;
+
   return (
     <Pressable
       style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]}
       onPress={onPress}
     >
       <View style={styles.imgBox}>
-        <Text style={styles.imgEmoji}>
-          {CATEGORY_EMOJI[item.category] ?? "📦"}
-        </Text>
+        {firstImage ? (
+          <Image
+            source={{ uri: firstImage }}
+            style={styles.imgPhoto}
+            resizeMode="cover"
+          />
+        ) : (
+          <Text style={styles.imgEmoji}>
+            {CATEGORY_EMOJI[item.category] ?? "📦"}
+          </Text>
+        )}
       </View>
       <View style={styles.cardBody}>
         <Text style={styles.cardName} numberOfLines={2}>
@@ -303,6 +315,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryDim,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
+  },
+  imgPhoto: {
+    width: "100%",
+    height: "100%",
   },
   imgEmoji: { fontSize: 40 },
   cardBody: { padding: spacing.md },

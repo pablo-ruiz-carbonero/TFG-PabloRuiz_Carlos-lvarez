@@ -1,125 +1,67 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { useState, useRef } from "react";
+// src/components/PerfilMenu.tsx
+
+import React from "react";
 import {
   View,
   Text,
-  TouchableOpacity,
-  StyleSheet,
-  Animated,
   Pressable,
+  StyleSheet,
+  ActivityIndicator,
 } from "react-native";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
-<<<<<<< HEAD
 import { colors, radius, spacing, font } from "../styles/Globaltheme";
-=======
-import { colors, radius, spacing, font } from "../styles/theme";
->>>>>>> bde9bfa08138ad909d6680ffafd4d5a2bbf04f20
 import { RootStackParamList } from "../types/navigation";
+import { useAuth } from "../features/auth/hooks/useAuth";
+import { getUserInitials } from "../features/auth/types/auth.types";
 
 type Nav = NavigationProp<RootStackParamList>;
 
-const avatarColors = [
-  colors.primary,
-  colors.primaryLight,
-  "#16a34a",
-  "#0ea5e9",
-];
-
-export default function PerfilMenu({ user }: { user: any }) {
+export default function PerfilMenu() {
   const navigation = useNavigation<Nav>();
-  const [menuVisible, setMenuVisible] = useState(false);
-  const scaleAnim = useRef(new Animated.Value(0)).current;
-  const colorFondo = useRef(
-    avatarColors[Math.floor(Math.random() * avatarColors.length)],
-  ).current;
+  const { user, loading } = useAuth();
 
-  const toggleMenu = () => {
-    setMenuVisible((value) => !value);
-    Animated.spring(scaleAnim, {
-      toValue: menuVisible ? 0 : 1,
-      useNativeDriver: true,
-    }).start();
-  };
+  // Mientras carga, mostrar spinner en lugar de "?"
+  if (loading) {
+    return (
+      <View style={styles.avatar}>
+        <ActivityIndicator size="small" color={colors.white} />
+      </View>
+    );
+  }
 
-  const inicial = user?.username?.charAt(0).toUpperCase() || "?";
-
-  const handleLogout = async () => {
-    await AsyncStorage.removeItem("token");
-  };
+  // ✅ Protección: user puede ser null en el primer render
+  const initials = user ? getUserInitials(user) : "–";
 
   return (
-    <View style={styles.container}>
-      {/* Avatar — abre menú o navega directo según prefieras */}
-      <TouchableOpacity
-        onPress={() => navigation.navigate("ProfileScreen")}
-        style={styles.touchable}
-      >
-        {user?.photoURL ? (
-          <Animated.Image
-            source={{ uri: user.photoURL }}
-            style={styles.avatarImg}
-          />
-        ) : (
-          <View style={[styles.avatar, { backgroundColor: colorFondo }]}>
-            <Text style={styles.letter}>{inicial}</Text>
-          </View>
-        )}
-      </TouchableOpacity>
-
-      {/* Pressable vacío conservado por si lo necesitas para otra acción */}
-      <Pressable onPress={() => navigation.navigate("ProfileScreen")} />
-    </View>
+    <Pressable
+      style={({ pressed }) => [styles.avatar, pressed && { opacity: 0.8 }]}
+      onPress={() => navigation.navigate("ProfileScreen")}
+    >
+      <Text style={styles.letter}>{initials}</Text>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    alignItems: "flex-end",
-    padding: spacing.sm,
-  },
-  touchable: {
-    borderRadius: radius.full,
-  },
   avatar: {
     width: 46,
     height: 46,
     borderRadius: 23,
+    backgroundColor: colors.primary,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: colors.surface,
+    borderColor: colors.primaryDim,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
   },
   letter: {
     color: colors.white,
     fontWeight: "800",
-    fontSize: font.lg,
-  },
-  avatarImg: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-  },
-  menu: {
-    marginTop: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    paddingVertical: spacing.sm,
-    minWidth: 140,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
-    elevation: 6,
-  },
-  menuItem: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  menuItemPressed: {
-    backgroundColor: colors.primaryDim,
-  },
-  menuText: {
-    color: colors.textPrimary,
-    fontSize: font.sm,
+    fontSize: font.md,
+    letterSpacing: 0.5,
   },
 });
