@@ -1,6 +1,6 @@
 // src/screens/auth/profile/EditProfileScreen.tsx
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   Text,
@@ -11,7 +11,6 @@ import {
   Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
@@ -25,6 +24,7 @@ import {
 import { RootStackParamList } from "../../../types/navigation";
 import { useAuth } from "../../../features/auth/hooks/useAuth";
 import { getUserInitials } from "../../../features/auth/types/auth.types";
+import { useKeyboardAwareScroll } from "../../../core/hooks/useKeyboardAwareScroll";
 
 type Nav = NavigationProp<RootStackParamList>;
 
@@ -62,7 +62,6 @@ const PROVINCES = [
   "Salamanca",
   "Cáceres",
   "Badajoz",
-  "Huelva",
   "Tarragona",
   "Gerona",
 ];
@@ -70,20 +69,26 @@ const PROVINCES = [
 export default function EditProfileScreen() {
   const navigation = useNavigation<Nav>();
   const { user, updateProfile } = useAuth();
+  const { scrollRef, onFocus, kavProps, scrollViewProps } =
+    useKeyboardAwareScroll();
 
-  // ✅ Inicializa con los datos reales del usuario
-  const [name, setName] = useState(user?.name ?? "");
-  const [email] = useState(user?.email ?? ""); // email no editable
-  const [phone, setPhone] = useState(user?.phone ?? "");
-  const [role, setRole] = useState(user?.role ?? ROLES[0]);
-  const [location, setLocation] = useState(user?.location ?? "");
-  const [bio, setBio] = useState(user?.bio ?? "");
+  const [name, setName] = useState(user?.nombre ?? "");
+  const [email] = useState(user?.email ?? "");
+  const [phone, setPhone] = useState(user?.telefono ?? "");
+  const [role, setRole] = useState(user?.rol ?? ROLES[0]);
+  const [location, setLocation] = useState( "");
+  const [bio, setBio] = useState("");
 
   const [showRolePicker, setShowRolePicker] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const initials = user ? getUserInitials({ ...user, name }) : "??";
+  // Refs para scroll automático
+  const nameRef = useRef<View>(null);
+  const phoneRef = useRef<View>(null);
+  const bioRef = useRef<View>(null);
+
+  const initials = user ? getUserInitials({ ...user, nombre: name }) : "??";
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -93,12 +98,9 @@ export default function EditProfileScreen() {
     try {
       setLoading(true);
       await updateProfile({
-        // ✅ usa el AuthContext
-        name: name.trim(),
-        phone: phone.trim() || undefined,
-        role,
-        location: location || undefined,
-        bio: bio.trim() || undefined,
+        nombre: name.trim(),
+        telefono: phone.trim() || undefined,
+        rol: role,
       });
       Alert.alert(
         "✅ Perfil actualizado",
@@ -114,14 +116,11 @@ export default function EditProfileScreen() {
 
   return (
     <SafeAreaView style={shared.screen}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
+      <KeyboardAvoidingView {...kavProps}>
         <ScrollView
+          ref={scrollRef}
+          {...scrollViewProps}
           contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
         >
           {/* Header */}
           <View style={styles.header}>
@@ -148,34 +147,40 @@ export default function EditProfileScreen() {
 
           {/* Datos básicos */}
           <View style={[shared.card, styles.section]}>
-            <Text style={styles.fieldLabel}>
-              Nombre completo <Text style={styles.required}>*</Text>
-            </Text>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="Tu nombre"
-              placeholderTextColor={colors.textMuted}
-            />
+            <View ref={nameRef}>
+              <Text style={styles.fieldLabel}>
+                Nombre completo <Text style={styles.required}>*</Text>
+              </Text>
+              <TextInput
+                style={styles.input}
+                value={name}
+                onChangeText={setName}
+                placeholder="Tu nombre"
+                placeholderTextColor={colors.textMuted}
+                onFocus={() => onFocus(nameRef)}
+              />
+            </View>
 
-            <Text style={[styles.fieldLabel, { marginTop: spacing.md }]}>
-              Teléfono
-            </Text>
-            <TextInput
-              style={styles.input}
-              value={phone}
-              onChangeText={setPhone}
-              placeholder="+34 600 000 000"
-              placeholderTextColor={colors.textMuted}
-              keyboardType="phone-pad"
-            />
+            <View ref={phoneRef} style={{ marginTop: spacing.md }}>
+              <Text style={styles.fieldLabel}>Teléfono</Text>
+              <TextInput
+                style={styles.input}
+                value={phone}
+                onChangeText={setPhone}
+                placeholder="+34 600 000 000"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="phone-pad"
+                onFocus={() => onFocus(phoneRef)}
+              />
+            </View>
 
-            <Text style={[styles.fieldLabel, { marginTop: spacing.md }]}>
-              Email <Text style={styles.emailNote}>(no editable)</Text>
-            </Text>
-            <View style={[styles.input, styles.inputDisabled]}>
-              <Text style={styles.inputDisabledText}>{email}</Text>
+            <View style={{ marginTop: spacing.md }}>
+              <Text style={styles.fieldLabel}>
+                Email <Text style={styles.emailNote}>(no editable)</Text>
+              </Text>
+              <View style={[styles.input, styles.inputDisabled]}>
+                <Text style={styles.inputDisabledText}>{email}</Text>
+              </View>
             </View>
           </View>
 
@@ -268,19 +273,22 @@ export default function EditProfileScreen() {
 
           {/* Bio */}
           <View style={[shared.card, styles.section]}>
-            <Text style={styles.fieldLabel}>Sobre mí (opcional)</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={bio}
-              onChangeText={setBio}
-              placeholder="Cuéntanos sobre tu actividad agrícola..."
-              placeholderTextColor={colors.textMuted}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-              maxLength={300}
-            />
-            <Text style={styles.charCount}>{bio.length}/300</Text>
+            <View ref={bioRef}>
+              <Text style={styles.fieldLabel}>Sobre mí (opcional)</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={bio}
+                onChangeText={setBio}
+                placeholder="Cuéntanos sobre tu actividad agrícola..."
+                placeholderTextColor={colors.textMuted}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+                maxLength={300}
+                onFocus={() => onFocus(bioRef)}
+              />
+              <Text style={styles.charCount}>{bio.length}/300</Text>
+            </View>
           </View>
 
           {/* Guardar */}

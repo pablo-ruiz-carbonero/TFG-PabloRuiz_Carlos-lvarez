@@ -1,6 +1,6 @@
 // src/features/products/context/ProductsContext.tsx
 
-import React, { createContext, useState, useCallback } from "react";
+import React, { createContext, useState, useCallback, useContext } from "react";
 import {
   Product,
   CreateProductDto,
@@ -15,6 +15,7 @@ import {
   updateProductRequest,
   deleteProductRequest,
 } from "../api/productsApi";
+import { AuthContext } from "../../auth/context/AuthContext";
 
 // ─────────────────────────────────────────────────────────────
 // 🚧 DEV MOCK — quitar cuando el backend esté listo
@@ -225,6 +226,7 @@ export const ProductsContext = createContext<ProductsContextType | null>(null);
 export const ProductsProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  const auth = useContext(AuthContext);
   const [products, setProducts] = useState<Product[]>([]);
   const [myProducts, setMyProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
@@ -267,7 +269,15 @@ export const ProductsProvider: React.FC<{ children: React.ReactNode }> = ({
   const fetchMyProducts = useCallback(async () => {
     await run(async () => {
       if (isDev()) {
-        setMyProducts(MOCK_PRODUCTS.filter((p) => p.seller.id === "me"));
+        // FIX Bug 3: merge los mocks iniciales con los productos creados en
+        // sesión — no sobreescribir, para no perder los recién publicados.
+        setMyProducts((prev) => {
+          const staticMocks = MOCK_PRODUCTS.filter((p) => p.seller.id === "me");
+          if (prev.length === 0) return staticMocks;
+          const prevIds = new Set(prev.map((p) => p.id));
+          const newMocks = staticMocks.filter((p) => !prevIds.has(p.id));
+          return [...prev, ...newMocks];
+        });
         return;
       }
       const data = await getMyProductsRequest();
@@ -291,6 +301,16 @@ export const ProductsProvider: React.FC<{ children: React.ReactNode }> = ({
   const createProduct = async (dto: CreateProductDto): Promise<Product> => {
     return run(async () => {
       if (isDev()) {
+        // FIX Bug 2: usar el nombre real del usuario autenticado en lugar
+        // del valor hardcodeado "Mi Cuenta".
+        const userName = auth?.user?.nombre ?? "Mi Cuenta";
+        const initials = userName
+          .split(" ")
+          .map((w) => w[0])
+          .join("")
+          .toUpperCase()
+          .slice(0, 2);
+
         const newProduct: Product = {
           id: `p_${Date.now()}`,
           name: dto.name,
@@ -303,8 +323,8 @@ export const ProductsProvider: React.FC<{ children: React.ReactNode }> = ({
           location: dto.province,
           seller: {
             id: "me",
-            name: "Mi Cuenta",
-            initials: "MC",
+            name: userName,
+            initials,
             rating: 0,
             sales: 0,
             location: dto.province,

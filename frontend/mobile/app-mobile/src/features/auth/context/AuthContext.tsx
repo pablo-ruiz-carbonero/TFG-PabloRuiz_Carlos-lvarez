@@ -1,7 +1,12 @@
 // src/features/auth/context/AuthContext.tsx
 
-import React, { createContext, useEffect, useState } from "react";
-import { User, UpdateProfileDto, ChangePasswordDto } from "../types/auth.types";
+import React, { createContext, useCallback, useEffect, useState } from "react";
+import {
+  User,
+  UpdateProfileDto,
+  ChangePasswordDto,
+  RegisterDto,
+} from "../types/auth.types";
 import {
   loginRequest,
   registerRequest,
@@ -11,28 +16,28 @@ import {
 } from "../api/authApi";
 import { saveToken, getToken, removeToken } from "../utils/tokenStorage";
 
-// ─────────────────────────────────────────────────────────────
-// 🚧 DEV BYPASS
-// ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// DEV BYPASS — solo activo en desarrollo (__DEV__ = true en Expo)
+// ─────────────────────────────────────────────────────────────────────────────
 const DEV_BYPASS = __DEV__;
 
 const DEV_USER: User = {
-  id: "dev-001",
+  id: 0,
   email: "dev@agrolink.com",
-  name: "Dev User",
-  role: "Agricultor",
-  location: "Sevilla",
-  bio: "Usuario de desarrollo para pruebas.",
-  phone: "+34 600 000 000",
+  nombre: "Dev User",
+  telefono: "+34 600 000 000",
+  rol: "Agricultor",
 };
-// ─────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 interface AuthContextType {
   user: User | null;
+  token: string | null;
   loading: boolean;
   isDevMode: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name?: string) => Promise<void>;
+  register: (dto: RegisterDto) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (dto: UpdateProfileDto) => Promise<void>;
   changePassword: (dto: ChangePasswordDto) => Promise<void>;
@@ -45,65 +50,73 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    bootstrap();
-  }, []);
-
-  const bootstrap = async () => {
+  // Carga la sesión guardada al arrancar la app
+  const bootstrap = useCallback(async () => {
     try {
-      const token = await getToken();
-      if (!token) return;
-      const userData = await getMeRequest(token);
+      const saved = await getToken();
+      if (!saved) return;
+      // Verificamos que el token sigue siendo válido contra /auth/me
+      const userData = await getMeRequest(saved);
+      setToken(saved);
       setUser(userData);
     } catch {
+      // Token caducado o inválido — limpiamos
       await removeToken();
       setUser(null);
+      setToken(null);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    bootstrap();
+  }, [bootstrap]);
 
   const login = async (email: string, password: string) => {
     const data = await loginRequest({ email, password });
+    // FIX PRINCIPAL: el backend devuelve "accessToken", no "token"
     await saveToken(data.accessToken);
+    setToken(data.accessToken);
     setUser(data.user);
   };
 
-  const register = async (email: string, password: string, name?: string) => {
-    const data = await registerRequest({ email, password, name });
+  const register = async (dto: RegisterDto) => {
+    const data = await registerRequest(dto);
+    // FIX: mismo campo "accessToken"
     await saveToken(data.accessToken);
+    setToken(data.accessToken);
     setUser(data.user);
   };
 
   const logout = async () => {
     await removeToken();
     setUser(null);
+    setToken(null);
   };
 
-  // ✅ Actualiza perfil y refleja cambios en el contexto inmediatamente
   const updateProfile = async (dto: UpdateProfileDto) => {
-    if (DEV_BYPASS) {
+    if (DEV_BYPASS && !token) {
       setUser((prev) => (prev ? { ...prev, ...dto } : prev));
       return;
     }
-    const token = await getToken();
-    if (!token) throw new Error("No autenticado");
-    const updated = await updateProfileRequest(token, dto);
+    const saved = token ?? (await getToken());
+    if (!saved) throw new Error("No autenticado");
+    const updated = await updateProfileRequest(saved, dto);
     setUser(updated);
   };
 
-  // ✅ Cambio de contraseña delegado al API
   const changePassword = async (dto: ChangePasswordDto) => {
-    if (DEV_BYPASS) {
-      // Simula éxito en dev sin llamada real
+    if (DEV_BYPASS && !token) {
       await new Promise((r) => setTimeout(r, 600));
       return;
     }
-    const token = await getToken();
-    if (!token) throw new Error("No autenticado");
-    await changePasswordRequest(token, dto);
+    const saved = token ?? (await getToken());
+    if (!saved) throw new Error("No autenticado");
+    await changePasswordRequest(saved, dto);
   };
 
   const devLogin = () => {
@@ -116,6 +129,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     <AuthContext.Provider
       value={{
         user,
+        token,
         loading,
         isDevMode: DEV_BYPASS,
         login,

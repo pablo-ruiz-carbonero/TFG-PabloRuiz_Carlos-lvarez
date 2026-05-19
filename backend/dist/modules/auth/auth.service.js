@@ -27,7 +27,7 @@ let AuthService = class AuthService {
     async register(dto) {
         const existe = await this.userRepository.findOneBy({ email: dto.email });
         if (existe)
-            throw new common_1.ConflictException('El email ya está registrado');
+            throw new common_1.ConflictException("El email ya está registrado");
         const hashed = await bcrypt.hash(dto.password, 10);
         const user = this.userRepository.create({
             nombre: dto.nombre,
@@ -37,45 +37,36 @@ let AuthService = class AuthService {
             role: { id: 1 },
         });
         await this.userRepository.save(user);
-        const token = this.generarToken(user);
-        return { token };
+        const accessToken = this.generarToken(user);
+        return {
+            accessToken,
+            user: this.serializarUser(user),
+        };
     }
     async login(dto) {
         const user = await this.userRepository.findOne({
             where: { email: dto.email },
-            relations: ['role'],
+            relations: ["role"],
         });
         if (!user)
-            throw new common_1.UnauthorizedException('Credenciales incorrectas');
+            throw new common_1.UnauthorizedException("Credenciales incorrectas");
         const valido = await bcrypt.compare(dto.password, user.password);
         if (!valido)
-            throw new common_1.UnauthorizedException('Credenciales incorrectas');
-        const token = this.generarToken(user);
+            throw new common_1.UnauthorizedException("Credenciales incorrectas");
+        const accessToken = this.generarToken(user);
         return {
-            token,
-            user: {
-                id: user.id,
-                nombre: user.nombre,
-                email: user.email,
-                telefono: user.telefono,
-                rol: user.role?.nombre ?? null,
-            },
+            accessToken,
+            user: this.serializarUser(user),
         };
     }
     async getMe(userId) {
         const user = await this.userRepository.findOne({
             where: { id: userId },
-            relations: ['role'],
+            relations: ["role"],
         });
         if (!user)
-            throw new common_1.UnauthorizedException('Usuario no encontrado');
-        return {
-            id: user.id,
-            nombre: user.nombre,
-            email: user.email,
-            telefono: user.telefono,
-            rol: user.role?.nombre ?? null,
-        };
+            throw new common_1.UnauthorizedException("Usuario no encontrado");
+        return this.serializarUser(user);
     }
     generarToken(user) {
         const payload = {
@@ -84,6 +75,15 @@ let AuthService = class AuthService {
             rol: user.role?.nombre ?? null,
         };
         return this.jwtService.sign(payload);
+    }
+    serializarUser(user) {
+        return {
+            id: user.id,
+            nombre: user.nombre,
+            email: user.email,
+            telefono: user.telefono ?? null,
+            rol: user.role?.nombre ?? null,
+        };
     }
 };
 exports.AuthService = AuthService;

@@ -1,4 +1,4 @@
-// src/screens/RegisterScreen.tsx
+// src/screens/auth/RegisterScreen.tsx
 
 import React, { JSX, useEffect, useRef, useState } from "react";
 import {
@@ -29,45 +29,16 @@ export default function RegisterScreen(): JSX.Element {
   const { loading, error, execute } = useAuthForm();
 
   const [nombre, setNombre] = useState("");
+  const [telefono, setTelefono] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
 
-  // ✅ Mostrar error del servidor cuando cambia
   useEffect(() => {
-    if (error) {
-      Alert.alert("Error al registrarse", error);
-    }
+    if (error) Alert.alert("Error al registrarse", error);
   }, [error]);
-
-  const isValidEmail = (value: string) => /\S+@\S+\.\S+/.test(value);
-
-  const handleRegister = () => {
-    if (!nombre || !email || !password) {
-      Alert.alert("Campos incompletos", "Completa todos los campos");
-      return;
-    }
-
-    if (!isValidEmail(email)) {
-      Alert.alert("Email inválido", "Introduce un email válido");
-      return;
-    }
-
-    execute(async () => {
-      // ✅ Ahora se pasa telefono al contexto → API → backend
-      await register(email, password, nombre);
-
-      setNombre("");
-      setEmail("");
-      setPassword("");
-
-      // Nota: si el register tiene éxito, AuthContext setea el user
-      // y AppNavigator redirige automáticamente a MainStack.
-      // Solo navega a Login si tu flujo requiere verificación de email, etc.
-    });
-  };
 
   useEffect(() => {
     Animated.parallel([
@@ -85,6 +56,34 @@ export default function RegisterScreen(): JSX.Element {
     ]).start();
   }, []);
 
+  const isValidEmail = (value: string) => /\S+@\S+\.\S+/.test(value);
+
+  const handleRegister = () => {
+    if (!nombre || !email || !password) {
+      Alert.alert(
+        "Campos incompletos",
+        "Nombre, email y contraseña son obligatorios",
+      );
+      return;
+    }
+    if (!isValidEmail(email)) {
+      Alert.alert("Email inválido", "Introduce un email válido");
+      return;
+    }
+
+    execute(async () => {
+      // FIX: se pasan "nombre" y "telefono" (campos que espera el backend)
+      await register({
+        email,
+        password,
+        nombre,
+        telefono: telefono || undefined,
+      });
+      // Si el registro tiene éxito, AuthContext setea el user y
+      // AppNavigator redirige automáticamente a MainStack.
+    });
+  };
+
   return (
     <ImageBackground
       source={require("../../../assets/login-bg.webp")}
@@ -96,10 +95,7 @@ export default function RegisterScreen(): JSX.Element {
           <Animated.View
             style={[
               styles.card,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }],
-              },
+              { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
             ]}
           >
             <Text style={shared.title}>🌱 Agro Link</Text>
@@ -111,6 +107,15 @@ export default function RegisterScreen(): JSX.Element {
               placeholderTextColor={colors.textMuted}
               onChangeText={setNombre}
               value={nombre}
+            />
+
+            <TextInput
+              style={shared.input}
+              placeholder="Teléfono (opcional)"
+              placeholderTextColor={colors.textMuted}
+              keyboardType="phone-pad"
+              onChangeText={setTelefono}
+              value={telefono}
             />
 
             <TextInput

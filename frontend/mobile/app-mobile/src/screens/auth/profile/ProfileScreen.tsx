@@ -69,7 +69,6 @@ export default function ProfileScreen() {
   const { crops } = useCrops();
   const { myProducts } = useProducts();
 
-  // ✅ Pantalla de carga en lugar de pantalla en blanco
   if (!user) {
     return (
       <SafeAreaView style={shared.screen}>
@@ -84,7 +83,6 @@ export default function ProfileScreen() {
 
   const initials = getUserInitials(user);
 
-  // Stats dinámicos desde los contextos
   const stats = [
     { label: "Cultivos", value: crops.length },
     { label: "Anuncios", value: myProducts.length },
@@ -107,9 +105,7 @@ export default function ProfileScreen() {
         {
           text: "Cerrar sesión",
           style: "destructive",
-          onPress: async () => {
-            await logout(); // ✅ usa el logout del AuthContext
-          },
+          onPress: async () => await logout(),
         },
       ],
     );
@@ -130,17 +126,23 @@ export default function ProfileScreen() {
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{initials}</Text>
           </View>
-          <Text style={styles.profileName}>{user.name ?? "Sin nombre"}</Text>
-          {user.role && (
+
+          {/* FIX: user.nombre en lugar de user.name */}
+          <Text style={styles.profileName}>{user.nombre ?? "Sin nombre"}</Text>
+
+          {/* FIX: user.rol en lugar de user.role */}
+          {user.rol && (
             <View style={styles.roleBadge}>
-              <Text style={styles.roleBadgeText}>{user.role}</Text>
+              <Text style={styles.roleBadgeText}>{user.rol}</Text>
             </View>
           )}
+
           <Text style={styles.profileEmail}>{user.email}</Text>
-          {user.location && (
-            <Text style={styles.profileLocation}>📍 {user.location}</Text>
+
+          {/* FIX: user.telefono en lugar de user.phone / user.location */}
+          {user.telefono && (
+            <Text style={styles.profileLocation}>📞 {user.telefono}</Text>
           )}
-          {user.bio && <Text style={styles.profileBio}>{user.bio}</Text>}
         </View>
 
         {/* Stats */}
@@ -253,14 +255,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   profileLocation: { fontSize: font.sm, color: colors.textMuted },
-  profileBio: {
-    fontSize: font.sm,
-    color: colors.textSecond,
-    textAlign: "center",
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.lg,
-    lineHeight: 20,
-  },
   statsRow: {
     flexDirection: "row",
     paddingHorizontal: spacing.lg,

@@ -1,6 +1,6 @@
-// src/screens/NewTask.tsx
+// src/screens/crops/NewTask.tsx
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   ScrollView,
   Alert,
   Platform,
+  KeyboardAvoidingView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -33,6 +34,7 @@ import {
   TaskType,
 } from "../../features/crops/types/crops.types";
 import { useCropDetail } from "../../features/crops/hooks/useCropDetail";
+import { useKeyboardAwareScroll } from "../../core/hooks/useKeyboardAwareScroll";
 
 type Nav = NavigationProp<RootStackParamList>;
 type RouteP = RouteProp<RootStackParamList, "NewTask">;
@@ -52,6 +54,8 @@ export default function NewTask() {
   const { cropId, preselect } = route.params;
 
   const { addTask, loading } = useCropDetail(cropId);
+  const { scrollRef, onFocus, kavProps, scrollViewProps } =
+    useKeyboardAwareScroll();
 
   const [taskType, setTaskType] = useState<TaskType>(
     (preselect as TaskType) ?? "Riego",
@@ -64,6 +68,10 @@ export default function NewTask() {
   const [description, setDescription] = useState("");
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState(UNITS[0]);
+
+  // Refs para scroll automático
+  const quantityRef = useRef<View>(null);
+  const descriptionRef = useRef<View>(null);
 
   const fmtDate = (d: Date) =>
     d.toLocaleDateString("es-ES", {
@@ -105,193 +113,204 @@ export default function NewTask() {
 
   return (
     <SafeAreaView style={shared.screen}>
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <Pressable onPress={() => navigation.goBack()}>
-            <Text style={styles.backBtn}>← Volver</Text>
-          </Pressable>
-          <Text style={styles.headerTitle}>Nueva Tarea</Text>
-          <View style={{ width: 60 }} />
-        </View>
-
-        {/* Tipo de tarea */}
-        <View style={shared.card}>
-          <Text style={shared.sectionTitle}>Tipo de tarea</Text>
-          <View style={styles.typeGrid}>
-            {TASK_TYPES.map(({ type, icon, label }) => (
-              <Pressable
-                key={type}
-                style={[
-                  styles.typeCard,
-                  taskType === type && styles.typeCardActive,
-                ]}
-                onPress={() => setTaskType(type)}
-              >
-                <Text style={styles.typeIcon}>{icon}</Text>
-                <Text
-                  style={[
-                    styles.typeLabel,
-                    taskType === type && styles.typeLabelActive,
-                  ]}
-                >
-                  {label}
-                </Text>
-              </Pressable>
-            ))}
+      <KeyboardAvoidingView {...kavProps}>
+        <ScrollView
+          ref={scrollRef}
+          {...scrollViewProps}
+          contentContainerStyle={styles.scroll}
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <Pressable onPress={() => navigation.goBack()}>
+              <Text style={styles.backBtn}>← Volver</Text>
+            </Pressable>
+            <Text style={styles.headerTitle}>Nueva Tarea</Text>
+            <View style={{ width: 60 }} />
           </View>
-        </View>
 
-        {/* Fecha y hora */}
-        <View style={shared.card}>
-          <Text style={shared.sectionTitle}>Fecha y hora</Text>
-
-          <Pressable
-            style={styles.dateBtn}
-            onPress={() => setShowDatePicker(true)}
-          >
-            <Text style={styles.dateBtnLabel}>Fecha</Text>
-            <Text style={styles.dateBtnValue}>📅 {fmtDate(date)}</Text>
-          </Pressable>
-
-          {showDatePicker && (
-            <DateTimePicker
-              value={date}
-              mode="date"
-              display={Platform.OS === "ios" ? "inline" : "default"}
-              onChange={(_, d) => {
-                setShowDatePicker(Platform.OS === "ios");
-                if (d) setDate(d);
-              }}
-            />
-          )}
-
-          <Pressable
-            style={[styles.toggleRow, { marginTop: spacing.md }]}
-            onPress={() => setIncludeTime((v) => !v)}
-          >
-            <Text style={styles.toggleLabel}>Añadir hora específica</Text>
-            <View style={[styles.toggle, includeTime && styles.toggleOn]}>
-              <View
-                style={[
-                  styles.toggleThumb,
-                  includeTime && styles.toggleThumbOn,
-                ]}
-              />
-            </View>
-          </Pressable>
-
-          {includeTime && (
-            <>
-              <Pressable
-                style={[styles.dateBtn, { marginTop: spacing.sm }]}
-                onPress={() => setShowTimePicker(true)}
-              >
-                <Text style={styles.dateBtnLabel}>Hora</Text>
-                <Text style={styles.dateBtnValue}>🕐 {fmtTime(time)}</Text>
-              </Pressable>
-
-              {showTimePicker && (
-                <DateTimePicker
-                  value={time}
-                  mode="time"
-                  display={Platform.OS === "ios" ? "spinner" : "default"}
-                  onChange={(_, t) => {
-                    setShowTimePicker(Platform.OS === "ios");
-                    if (t) setTime(t);
-                  }}
-                />
-              )}
-            </>
-          )}
-        </View>
-
-        {/* Cantidad (opcional) */}
-        <View style={shared.card}>
-          <Text style={shared.sectionTitle}>Cantidad (opcional)</Text>
-          <View style={styles.quantityRow}>
-            <TextInput
-              style={[shared.input, styles.quantityInput]}
-              placeholder="Ej: 20"
-              placeholderTextColor={colors.textMuted}
-              keyboardType="decimal-pad"
-              value={quantity}
-              onChangeText={setQuantity}
-            />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.unitScroll}
-            >
-              {UNITS.map((u) => (
+          {/* Tipo de tarea */}
+          <View style={shared.card}>
+            <Text style={shared.sectionTitle}>Tipo de tarea</Text>
+            <View style={styles.typeGrid}>
+              {TASK_TYPES.map(({ type, icon, label }) => (
                 <Pressable
-                  key={u}
-                  style={[styles.chip, unit === u && styles.chipActive]}
-                  onPress={() => setUnit(u)}
+                  key={type}
+                  style={[
+                    styles.typeCard,
+                    taskType === type && styles.typeCardActive,
+                  ]}
+                  onPress={() => setTaskType(type)}
                 >
+                  <Text style={styles.typeIcon}>{icon}</Text>
                   <Text
                     style={[
-                      styles.chipText,
-                      unit === u && styles.chipTextActive,
+                      styles.typeLabel,
+                      taskType === type && styles.typeLabelActive,
                     ]}
                   >
-                    {u}
+                    {label}
                   </Text>
                 </Pressable>
               ))}
-            </ScrollView>
+            </View>
           </View>
-        </View>
 
-        {/* Descripción */}
-        <View style={shared.card}>
-          <Text style={shared.sectionTitle}>Descripción (opcional)</Text>
-          <TextInput
-            style={[shared.input, styles.textarea]}
-            placeholder="Notas sobre esta tarea..."
-            placeholderTextColor={colors.textMuted}
-            multiline
-            numberOfLines={3}
-            value={description}
-            onChangeText={setDescription}
-            textAlignVertical="top"
-          />
-        </View>
+          {/* Fecha y hora */}
+          <View style={shared.card}>
+            <Text style={shared.sectionTitle}>Fecha y hora</Text>
 
-        {/* Resumen */}
-        <View style={styles.summary}>
-          <Text style={styles.summaryTitle}>Resumen</Text>
-          <Text style={styles.summaryText}>
-            {TASK_TYPES.find((t) => t.type === taskType)?.icon} {taskType} el{" "}
-            {fmtDate(date)}
-            {includeTime ? ` a las ${fmtTime(time)}` : ""}
-            {quantity ? ` · ${quantity} ${unit}` : ""}
-          </Text>
-        </View>
+            <Pressable
+              style={styles.dateBtn}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Text style={styles.dateBtnLabel}>Fecha</Text>
+              <Text style={styles.dateBtnValue}>📅 {fmtDate(date)}</Text>
+            </Pressable>
 
-        {/* Actions */}
-        <View style={styles.actions}>
-          <Pressable
-            style={[shared.btnOutline, { flex: 1 }]}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={shared.btnOutlineText}>Cancelar</Text>
-          </Pressable>
-          <Pressable
-            style={[shared.btnPrimary, { flex: 1, opacity: loading ? 0.7 : 1 }]}
-            onPress={handleSubmit}
-            disabled={loading}
-          >
-            <Text style={shared.btnPrimaryText}>
-              {loading ? "Guardando..." : "Guardar tarea"}
+            {showDatePicker && (
+              <DateTimePicker
+                value={date}
+                mode="date"
+                display={Platform.OS === "ios" ? "inline" : "default"}
+                onChange={(_, d) => {
+                  setShowDatePicker(Platform.OS === "ios");
+                  if (d) setDate(d);
+                }}
+              />
+            )}
+
+            <Pressable
+              style={[styles.toggleRow, { marginTop: spacing.md }]}
+              onPress={() => setIncludeTime((v) => !v)}
+            >
+              <Text style={styles.toggleLabel}>Añadir hora específica</Text>
+              <View style={[styles.toggle, includeTime && styles.toggleOn]}>
+                <View
+                  style={[
+                    styles.toggleThumb,
+                    includeTime && styles.toggleThumbOn,
+                  ]}
+                />
+              </View>
+            </Pressable>
+
+            {includeTime && (
+              <>
+                <Pressable
+                  style={[styles.dateBtn, { marginTop: spacing.sm }]}
+                  onPress={() => setShowTimePicker(true)}
+                >
+                  <Text style={styles.dateBtnLabel}>Hora</Text>
+                  <Text style={styles.dateBtnValue}>🕐 {fmtTime(time)}</Text>
+                </Pressable>
+
+                {showTimePicker && (
+                  <DateTimePicker
+                    value={time}
+                    mode="time"
+                    display={Platform.OS === "ios" ? "spinner" : "default"}
+                    onChange={(_, t) => {
+                      setShowTimePicker(Platform.OS === "ios");
+                      if (t) setTime(t);
+                    }}
+                  />
+                )}
+              </>
+            )}
+          </View>
+
+          {/* Cantidad (opcional) */}
+          <View style={shared.card}>
+            <View ref={quantityRef}>
+              <Text style={shared.sectionTitle}>Cantidad (opcional)</Text>
+              <View style={styles.quantityRow}>
+                <TextInput
+                  style={[shared.input, styles.quantityInput]}
+                  placeholder="Ej: 20"
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="decimal-pad"
+                  value={quantity}
+                  onChangeText={setQuantity}
+                  onFocus={() => onFocus(quantityRef)}
+                />
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.unitScroll}
+                >
+                  {UNITS.map((u) => (
+                    <Pressable
+                      key={u}
+                      style={[styles.chip, unit === u && styles.chipActive]}
+                      onPress={() => setUnit(u)}
+                    >
+                      <Text
+                        style={[
+                          styles.chipText,
+                          unit === u && styles.chipTextActive,
+                        ]}
+                      >
+                        {u}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+          </View>
+
+          {/* Descripción */}
+          <View style={shared.card}>
+            <View ref={descriptionRef}>
+              <Text style={shared.sectionTitle}>Descripción (opcional)</Text>
+              <TextInput
+                style={[shared.input, styles.textarea]}
+                placeholder="Notas sobre esta tarea..."
+                placeholderTextColor={colors.textMuted}
+                multiline
+                numberOfLines={3}
+                value={description}
+                onChangeText={setDescription}
+                textAlignVertical="top"
+                onFocus={() => onFocus(descriptionRef)}
+              />
+            </View>
+          </View>
+
+          {/* Resumen */}
+          <View style={styles.summary}>
+            <Text style={styles.summaryTitle}>Resumen</Text>
+            <Text style={styles.summaryText}>
+              {TASK_TYPES.find((t) => t.type === taskType)?.icon} {taskType} el{" "}
+              {fmtDate(date)}
+              {includeTime ? ` a las ${fmtTime(time)}` : ""}
+              {quantity ? ` · ${quantity} ${unit}` : ""}
             </Text>
-          </Pressable>
-        </View>
-      </ScrollView>
+          </View>
+
+          {/* Actions */}
+          <View style={styles.actions}>
+            <Pressable
+              style={[shared.btnOutline, { flex: 1 }]}
+              onPress={() => navigation.goBack()}
+            >
+              <Text style={shared.btnOutlineText}>Cancelar</Text>
+            </Pressable>
+            <Pressable
+              style={[
+                shared.btnPrimary,
+                { flex: 1, opacity: loading ? 0.7 : 1 },
+              ]}
+              onPress={handleSubmit}
+              disabled={loading}
+            >
+              <Text style={shared.btnPrimaryText}>
+                {loading ? "Guardando..." : "Guardar tarea"}
+              </Text>
+            </Pressable>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

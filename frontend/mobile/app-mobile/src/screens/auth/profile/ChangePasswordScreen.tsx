@@ -1,6 +1,6 @@
 // src/screens/auth/profile/ChangePasswordScreen.tsx
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   Text,
@@ -11,7 +11,6 @@ import {
   Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
@@ -24,6 +23,7 @@ import {
 } from "../../../styles/Globaltheme";
 import { RootStackParamList } from "../../../types/navigation";
 import { useAuth } from "../../../features/auth/hooks/useAuth";
+import { useKeyboardAwareScroll } from "../../../core/hooks/useKeyboardAwareScroll";
 
 type Nav = NavigationProp<RootStackParamList>;
 
@@ -40,9 +40,9 @@ function PasswordField({
   show,
   toggleShow,
   error,
-  field,
   placeholder,
   onBlur,
+  onFocus,
 }: {
   label: string;
   value: string;
@@ -53,6 +53,7 @@ function PasswordField({
   field: string;
   placeholder: string;
   onBlur: () => void;
+  onFocus?: () => void;
 }) {
   return (
     <View style={styles.fieldWrapper}>
@@ -66,6 +67,7 @@ function PasswordField({
           placeholderTextColor={colors.textMuted}
           secureTextEntry={!show}
           onBlur={onBlur}
+          onFocus={onFocus}
           autoCapitalize="none"
         />
         <Pressable onPress={toggleShow} style={styles.eyeBtn} hitSlop={8}>
@@ -79,7 +81,9 @@ function PasswordField({
 
 export default function ChangePasswordScreen() {
   const navigation = useNavigation<Nav>();
-  const { changePassword } = useAuth(); // ✅ usa el AuthContext
+  const { changePassword } = useAuth();
+  const { scrollRef, onFocus, kavProps, scrollViewProps } =
+    useKeyboardAwareScroll();
 
   const [current, setCurrent] = useState("");
   const [newPass, setNewPass] = useState("");
@@ -90,6 +94,11 @@ export default function ChangePasswordScreen() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  // Refs para scroll automático
+  const currentRef = useRef<View>(null);
+  const newPassRef = useRef<View>(null);
+  const confirmRef = useRef<View>(null);
 
   const strength = (() => {
     if (!newPass) return 0;
@@ -135,7 +144,7 @@ export default function ChangePasswordScreen() {
 
     try {
       setLoading(true);
-      await changePassword({ currentPassword: current, newPassword: newPass }); // ✅
+      await changePassword({ currentPassword: current, newPassword: newPass });
       Alert.alert(
         "✅ Contraseña actualizada",
         "Tu contraseña ha sido cambiada correctamente.",
@@ -152,14 +161,11 @@ export default function ChangePasswordScreen() {
 
   return (
     <SafeAreaView style={shared.screen}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
+      <KeyboardAvoidingView {...kavProps}>
         <ScrollView
+          ref={scrollRef}
+          {...scrollViewProps}
           contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
             <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
@@ -179,62 +185,77 @@ export default function ChangePasswordScreen() {
           </View>
 
           <View style={[shared.card, styles.section]}>
-            <PasswordField
-              label="Contraseña actual"
-              field="current"
-              value={current}
-              onChange={setCurrent}
-              show={showCurrent}
-              toggleShow={() => setShowCurrent((o) => !o)}
-              placeholder="Tu contraseña actual"
-              onBlur={() => handleBlur("current")}
-              error={hasError("current") ? errors.current : undefined}
-            />
+            <View ref={currentRef}>
+              <PasswordField
+                label="Contraseña actual"
+                field="current"
+                value={current}
+                onChange={setCurrent}
+                show={showCurrent}
+                toggleShow={() => setShowCurrent((o) => !o)}
+                placeholder="Tu contraseña actual"
+                onBlur={() => handleBlur("current")}
+                onFocus={() => onFocus(currentRef)}
+                error={hasError("current") ? errors.current : undefined}
+              />
+            </View>
+
             <View style={styles.divider} />
-            <PasswordField
-              label="Nueva contraseña"
-              field="newPass"
-              value={newPass}
-              onChange={setNewPass}
-              show={showNew}
-              toggleShow={() => setShowNew((o) => !o)}
-              placeholder="Mínimo 8 caracteres"
-              onBlur={() => handleBlur("newPass")}
-              error={hasError("newPass") ? errors.newPass : undefined}
-            />
-            {newPass.length > 0 && (
-              <View style={styles.strengthWrapper}>
-                <View style={styles.strengthBars}>
-                  {[1, 2, 3, 4].map((i) => (
-                    <View
-                      key={i}
-                      style={[
-                        styles.strengthBar,
-                        {
-                          backgroundColor:
-                            i <= strength ? strengthColor : colors.border,
-                        },
-                      ]}
-                    />
-                  ))}
+
+            <View ref={newPassRef}>
+              <PasswordField
+                label="Nueva contraseña"
+                field="newPass"
+                value={newPass}
+                onChange={setNewPass}
+                show={showNew}
+                toggleShow={() => setShowNew((o) => !o)}
+                placeholder="Mínimo 8 caracteres"
+                onBlur={() => handleBlur("newPass")}
+                onFocus={() => onFocus(newPassRef)}
+                error={hasError("newPass") ? errors.newPass : undefined}
+              />
+              {newPass.length > 0 && (
+                <View style={styles.strengthWrapper}>
+                  <View style={styles.strengthBars}>
+                    {[1, 2, 3, 4].map((i) => (
+                      <View
+                        key={i}
+                        style={[
+                          styles.strengthBar,
+                          {
+                            backgroundColor:
+                              i <= strength ? strengthColor : colors.border,
+                          },
+                        ]}
+                      />
+                    ))}
+                  </View>
+                  <Text
+                    style={[styles.strengthLabel, { color: strengthColor }]}
+                  >
+                    {strengthLabel}
+                  </Text>
                 </View>
-                <Text style={[styles.strengthLabel, { color: strengthColor }]}>
-                  {strengthLabel}
-                </Text>
-              </View>
-            )}
+              )}
+            </View>
+
             <View style={styles.divider} />
-            <PasswordField
-              label="Confirmar nueva contraseña"
-              field="confirm"
-              value={confirm}
-              onChange={setConfirm}
-              show={showConfirm}
-              toggleShow={() => setShowConfirm((o) => !o)}
-              placeholder="Repite la nueva contraseña"
-              onBlur={() => handleBlur("confirm")}
-              error={hasError("confirm") ? errors.confirm : undefined}
-            />
+
+            <View ref={confirmRef}>
+              <PasswordField
+                label="Confirmar nueva contraseña"
+                field="confirm"
+                value={confirm}
+                onChange={setConfirm}
+                show={showConfirm}
+                toggleShow={() => setShowConfirm((o) => !o)}
+                placeholder="Repite la nueva contraseña"
+                onBlur={() => handleBlur("confirm")}
+                onFocus={() => onFocus(confirmRef)}
+                error={hasError("confirm") ? errors.confirm : undefined}
+              />
+            </View>
           </View>
 
           <View style={[shared.card, styles.tipsCard]}>

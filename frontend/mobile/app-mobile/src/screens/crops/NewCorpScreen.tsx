@@ -1,393 +1,398 @@
-// src/screens/NewCorpScreen.tsx
+// src/screens/auth/profile/ChangePasswordScreen.tsx
 
-import React, { useEffect, useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   Text,
-  TextInput,
   StyleSheet,
   Pressable,
   ScrollView,
+  TextInput,
   Alert,
-  Platform,
+  ActivityIndicator,
+  KeyboardAvoidingView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
-import DateTimePicker from "@react-native-community/datetimepicker";
-
-import { colors, shared, spacing, font, radius } from "../../styles/Globaltheme";
+import {
+  colors,
+  shared,
+  spacing,
+  font,
+  radius,
+} from "../../styles/Globaltheme";
 import { RootStackParamList } from "../../types/navigation";
-import { CreateCropDto, CropPhase } from "../../features/crops/types/crops.types";
-import { useCrops } from "../../features/crops/hooks/useCrops";
+import { useAuth } from "../../features/auth/hooks/useAuth";
+import { useKeyboardAwareScroll } from "../../core/hooks/useKeyboardAwareScroll";
 
 type Nav = NavigationProp<RootStackParamList>;
 
-const PHASES: CropPhase[] = [
-  "Plántula",
-  "Crecimiento",
-  "Floración",
-  "Maduración",
-  "Cosecha",
-];
+interface FieldErrors {
+  current?: string;
+  newPass?: string;
+  confirm?: string;
+}
 
-const CROP_TYPES = [
-  "Hortalizas",
-  "Verduras",
-  "Frutales",
-  "Cereales",
-  "Legumbres",
-  "Aromáticas",
-  "Otros",
-];
+function PasswordField({
+  label,
+  value,
+  onChange,
+  show,
+  toggleShow,
+  error,
+  placeholder,
+  onBlur,
+  onFocus,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  show: boolean;
+  toggleShow: () => void;
+  error?: string;
+  field: string;
+  placeholder: string;
+  onBlur: () => void;
+  onFocus?: () => void;
+}) {
+  return (
+    <View style={styles.fieldWrapper}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <View style={[styles.passwordRow, !!error && styles.inputError]}>
+        <TextInput
+          style={styles.passwordInput}
+          value={value}
+          onChangeText={onChange}
+          placeholder={placeholder}
+          placeholderTextColor={colors.textMuted}
+          secureTextEntry={!show}
+          onBlur={onBlur}
+          onFocus={onFocus}
+          autoCapitalize="none"
+        />
+        <Pressable onPress={toggleShow} style={styles.eyeBtn} hitSlop={8}>
+          <Text style={styles.eyeIcon}>{show ? "🙈" : "👁️"}</Text>
+        </Pressable>
+      </View>
+      {error && <Text style={styles.errorText}>{error}</Text>}
+    </View>
+  );
+}
 
-export default function NewCorpScreen() {
+export default function ChangePasswordScreen() {
   const navigation = useNavigation<Nav>();
-  const { parcels, fetchParcels, createCrop, loading } = useCrops();
+  const { changePassword } = useAuth();
+  const { scrollRef, onFocus, kavProps, scrollViewProps } =
+    useKeyboardAwareScroll();
 
-  const [name, setName] = useState("");
-  const [variety, setVariety] = useState("");
-  const [cropType, setCropType] = useState(CROP_TYPES[0]);
-  const [parcelId, setParcelId] = useState("");
-  const [surfaceArea, setSurfaceArea] = useState("");
-  const [seedDate, setSeedDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [notes, setNotes] = useState("");
+  const [current, setCurrent] = useState("");
+  const [newPass, setNewPass] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
-  useEffect(() => {
-    fetchParcels();
-  }, []);
+  // Refs para scroll automático
+  const currentRef = useRef<View>(null);
+  const newPassRef = useRef<View>(null);
+  const confirmRef = useRef<View>(null);
 
-  useEffect(() => {
-    if (parcels.length > 0 && !parcelId) {
-      setParcelId(parcels[0].id);
-    }
-  }, [parcels]);
+  const strength = (() => {
+    if (!newPass) return 0;
+    let score = 0;
+    if (newPass.length >= 8) score++;
+    if (/[A-Z]/.test(newPass)) score++;
+    if (/[0-9]/.test(newPass)) score++;
+    if (/[^A-Za-z0-9]/.test(newPass)) score++;
+    return score;
+  })();
 
-  const handleSubmit = async () => {
-    if (!name.trim()) {
-      Alert.alert("Campo requerido", "El nombre del cultivo es obligatorio");
-      return;
-    }
-    if (!variety.trim()) {
-      Alert.alert("Campo requerido", "La variedad es obligatoria");
-      return;
-    }
-    if (!parcelId) {
-      Alert.alert("Campo requerido", "Selecciona una parcela");
-      return;
-    }
-    if (!surfaceArea || isNaN(parseFloat(surfaceArea))) {
-      Alert.alert("Campo inválido", "Introduce una superficie válida en hectáreas");
-      return;
-    }
+  const strengthLabel = ["", "Débil", "Regular", "Buena", "Fuerte"][strength];
+  const strengthColor = [
+    "",
+    colors.error,
+    colors.warning,
+    colors.info,
+    colors.success,
+  ][strength];
 
-    const dto: CreateCropDto = {
-      name: name.trim(),
-      variety: variety.trim(),
-      cropType,
-      parcelId,
-      surfaceArea: parseFloat(surfaceArea),
-      seedDate: seedDate.toISOString().split("T")[0],
-      notes: notes.trim() || undefined,
-    };
+  const validate = (): FieldErrors => {
+    const e: FieldErrors = {};
+    if (!current) e.current = "Introduce tu contraseña actual";
+    if (!newPass) e.newPass = "Introduce una nueva contraseña";
+    else if (newPass.length < 8) e.newPass = "Mínimo 8 caracteres";
+    if (!confirm) e.confirm = "Confirma tu nueva contraseña";
+    else if (confirm !== newPass) e.confirm = "Las contraseñas no coinciden";
+    return e;
+  };
+
+  const handleBlur = (field: string) => {
+    setTouched((t) => ({ ...t, [field]: true }));
+    setErrors(validate());
+  };
+
+  const hasError = (f: keyof FieldErrors) => touched[f] && !!errors[f];
+
+  const handleSave = async () => {
+    setTouched({ current: true, newPass: true, confirm: true });
+    const errs = validate();
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) return;
 
     try {
-      await createCrop(dto);
-      Alert.alert("Cultivo creado", `${name} se ha añadido correctamente`, [
-        { text: "OK", onPress: () => navigation.goBack() },
-      ]);
-    } catch {
-      Alert.alert("Error", "No se pudo crear el cultivo. Inténtalo de nuevo.");
+      setLoading(true);
+      await changePassword({ currentPassword: current, newPassword: newPass });
+      Alert.alert(
+        "✅ Contraseña actualizada",
+        "Tu contraseña ha sido cambiada correctamente.",
+        [{ text: "OK", onPress: () => navigation.goBack() }],
+      );
+    } catch (e: unknown) {
+      const msg =
+        e instanceof Error ? e.message : "La contraseña actual no es correcta.";
+      Alert.alert("Error", msg);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <SafeAreaView style={shared.screen}>
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <Pressable onPress={() => navigation.goBack()}>
-            <Text style={styles.backBtn}>← Volver</Text>
-          </Pressable>
-          <Text style={styles.headerTitle}>Nuevo Cultivo</Text>
-          <View style={{ width: 60 }} />
-        </View>
+      <KeyboardAvoidingView {...kavProps}>
+        <ScrollView
+          ref={scrollRef}
+          {...scrollViewProps}
+          contentContainerStyle={styles.scrollContent}
+        >
+          <View style={styles.header}>
+            <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
+              <Text style={styles.backButton}>← Volver</Text>
+            </Pressable>
+            <Text style={styles.headerTitle}>Cambiar contraseña</Text>
+            <View style={{ width: 60 }} />
+          </View>
 
-        {/* Datos básicos */}
-        <View style={shared.card}>
-          <Text style={shared.sectionTitle}>Datos básicos</Text>
+          <View style={styles.iconSection}>
+            <View style={styles.iconBox}>
+              <Text style={styles.iconEmoji}>🔒</Text>
+            </View>
+            <Text style={styles.iconSubtitle}>
+              Elige una contraseña segura con al menos 8 caracteres
+            </Text>
+          </View>
 
-          <FieldLabel>Nombre del cultivo *</FieldLabel>
-          <TextInput
-            style={shared.input}
-            placeholder="Ej: Tomate, Lechuga..."
-            placeholderTextColor={colors.textMuted}
-            value={name}
-            onChangeText={setName}
-          />
+          <View style={[shared.card, styles.section]}>
+            <View ref={currentRef}>
+              <PasswordField
+                label="Contraseña actual"
+                field="current"
+                value={current}
+                onChange={setCurrent}
+                show={showCurrent}
+                toggleShow={() => setShowCurrent((o) => !o)}
+                placeholder="Tu contraseña actual"
+                onBlur={() => handleBlur("current")}
+                onFocus={() => onFocus(currentRef)}
+                error={hasError("current") ? errors.current : undefined}
+              />
+            </View>
 
-          <FieldLabel>Variedad *</FieldLabel>
-          <TextInput
-            style={shared.input}
-            placeholder="Ej: Cherry, Batavia..."
-            placeholderTextColor={colors.textMuted}
-            value={variety}
-            onChangeText={setVariety}
-          />
+            <View style={styles.divider} />
 
-          <FieldLabel>Tipo de cultivo</FieldLabel>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.chipScroll}
-          >
-            {CROP_TYPES.map((t) => (
-              <Pressable
-                key={t}
-                style={[styles.chip, cropType === t && styles.chipActive]}
-                onPress={() => setCropType(t)}
-              >
-                <Text
-                  style={[
-                    styles.chipText,
-                    cropType === t && styles.chipTextActive,
-                  ]}
-                >
-                  {t}
-                </Text>
-              </Pressable>
+            <View ref={newPassRef}>
+              <PasswordField
+                label="Nueva contraseña"
+                field="newPass"
+                value={newPass}
+                onChange={setNewPass}
+                show={showNew}
+                toggleShow={() => setShowNew((o) => !o)}
+                placeholder="Mínimo 8 caracteres"
+                onBlur={() => handleBlur("newPass")}
+                onFocus={() => onFocus(newPassRef)}
+                error={hasError("newPass") ? errors.newPass : undefined}
+              />
+              {newPass.length > 0 && (
+                <View style={styles.strengthWrapper}>
+                  <View style={styles.strengthBars}>
+                    {[1, 2, 3, 4].map((i) => (
+                      <View
+                        key={i}
+                        style={[
+                          styles.strengthBar,
+                          {
+                            backgroundColor:
+                              i <= strength ? strengthColor : colors.border,
+                          },
+                        ]}
+                      />
+                    ))}
+                  </View>
+                  <Text
+                    style={[styles.strengthLabel, { color: strengthColor }]}
+                  >
+                    {strengthLabel}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.divider} />
+
+            <View ref={confirmRef}>
+              <PasswordField
+                label="Confirmar nueva contraseña"
+                field="confirm"
+                value={confirm}
+                onChange={setConfirm}
+                show={showConfirm}
+                toggleShow={() => setShowConfirm((o) => !o)}
+                placeholder="Repite la nueva contraseña"
+                onBlur={() => handleBlur("confirm")}
+                onFocus={() => onFocus(confirmRef)}
+                error={hasError("confirm") ? errors.confirm : undefined}
+              />
+            </View>
+          </View>
+
+          <View style={[shared.card, styles.tipsCard]}>
+            <Text style={styles.tipsTitle}>💡 Consejos de seguridad</Text>
+            {[
+              "Usa al menos 8 caracteres",
+              "Combina mayúsculas y minúsculas",
+              "Incluye números y símbolos",
+              "No uses la misma contraseña en otros sitios",
+            ].map((tip) => (
+              <Text key={tip} style={styles.tipItem}>
+                · {tip}
+              </Text>
             ))}
-          </ScrollView>
-        </View>
-
-        {/* Parcela */}
-        <View style={shared.card}>
-          <Text style={shared.sectionTitle}>Parcela</Text>
-
-          {parcels.length === 0 ? (
-            <Text style={styles.emptyNote}>
-              No hay parcelas disponibles. Añade una desde el panel de parcelas.
-            </Text>
-          ) : (
-            parcels.map((p) => (
-              <Pressable
-                key={p.id}
-                style={[
-                  styles.parcelRow,
-                  parcelId === p.id && styles.parcelRowActive,
-                ]}
-                onPress={() => setParcelId(p.id)}
-              >
-                <View style={styles.parcelRadio}>
-                  {parcelId === p.id && <View style={styles.parcelRadioFill} />}
-                </View>
-                <View>
-                  <Text style={styles.parcelName}>{p.name}</Text>
-                  {p.location && (
-                    <Text style={styles.parcelLocation}>{p.location}</Text>
-                  )}
-                </View>
-                <Text style={styles.parcelSize}>{p.size} ha</Text>
-              </Pressable>
-            ))
-          )}
-
-          <FieldLabel style={{ marginTop: spacing.md }}>
-            Superficie a cultivar (ha) *
-          </FieldLabel>
-          <TextInput
-            style={shared.input}
-            placeholder="Ej: 0.5"
-            placeholderTextColor={colors.textMuted}
-            keyboardType="decimal-pad"
-            value={surfaceArea}
-            onChangeText={setSurfaceArea}
-          />
-        </View>
-
-        {/* Fechas */}
-        <View style={shared.card}>
-          <Text style={shared.sectionTitle}>Fecha de siembra *</Text>
+          </View>
 
           <Pressable
-            style={styles.dateBtn}
-            onPress={() => setShowDatePicker(true)}
-          >
-            <Text style={styles.dateBtnText}>
-              📅{" "}
-              {seedDate.toLocaleDateString("es-ES", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
-            </Text>
-          </Pressable>
-
-          {showDatePicker && (
-            <DateTimePicker
-              value={seedDate}
-              mode="date"
-              display={Platform.OS === "ios" ? "inline" : "default"}
-              maximumDate={new Date()}
-              onChange={(_, date) => {
-                setShowDatePicker(Platform.OS === "ios");
-                if (date) setSeedDate(date);
-              }}
-            />
-          )}
-        </View>
-
-        {/* Notas */}
-        <View style={shared.card}>
-          <Text style={shared.sectionTitle}>Notas (opcional)</Text>
-          <TextInput
-            style={[shared.input, styles.textarea]}
-            placeholder="Observaciones, condiciones especiales..."
-            placeholderTextColor={colors.textMuted}
-            multiline
-            numberOfLines={4}
-            value={notes}
-            onChangeText={setNotes}
-            textAlignVertical="top"
-          />
-        </View>
-
-        {/* Actions */}
-        <View style={styles.actions}>
-          <Pressable
-            style={[shared.btnOutline, { flex: 1 }]}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={shared.btnOutlineText}>Cancelar</Text>
-          </Pressable>
-          <Pressable
-            style={[
-              shared.btnPrimary,
-              { flex: 1, opacity: loading ? 0.7 : 1 },
+            style={({ pressed }) => [
+              styles.btnSave,
+              pressed && { opacity: 0.85 },
+              loading && { opacity: 0.7 },
             ]}
-            onPress={handleSubmit}
+            onPress={handleSave}
             disabled={loading}
           >
-            <Text style={shared.btnPrimaryText}>
-              {loading ? "Creando..." : "Crear cultivo"}
-            </Text>
+            {loading ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <Text style={styles.btnSaveText}>Actualizar contraseña</Text>
+            )}
           </Pressable>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-function FieldLabel({
-  children,
-  style,
-}: {
-  children: React.ReactNode;
-  style?: object;
-}) {
-  return (
-    <Text style={[styles.fieldLabel, style]}>{children}</Text>
-  );
-}
-
 const styles = StyleSheet.create({
-  scroll: { paddingBottom: spacing.xxxl },
+  scrollContent: { paddingBottom: spacing.xxxl + spacing.xl },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.md,
   },
-  backBtn: { color: colors.primary, fontSize: font.md, fontWeight: "600", width: 60 },
+  backButton: {
+    color: colors.primary,
+    fontSize: font.md,
+    fontWeight: "600",
+    width: 60,
+  },
   headerTitle: {
     fontSize: font.lg,
     fontWeight: "800",
     color: colors.textPrimary,
   },
-  fieldLabel: {
-    fontSize: font.sm,
-    fontWeight: "600",
-    color: colors.textSecond,
-    marginBottom: spacing.xs,
-    marginTop: spacing.sm,
-  },
-  chipScroll: { marginBottom: spacing.md },
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginRight: spacing.sm,
-    backgroundColor: colors.surface,
-  },
-  chipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  chipText: { fontSize: font.sm, color: colors.textSecond, fontWeight: "600" },
-  chipTextActive: { color: colors.white },
-  emptyNote: {
-    fontSize: font.sm,
-    color: colors.textMuted,
-    fontStyle: "italic",
-    marginVertical: spacing.md,
-  },
-  parcelRow: {
-    flexDirection: "row",
+  iconSection: {
     alignItems: "center",
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    gap: spacing.md,
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.xl,
   },
-  parcelRowActive: { backgroundColor: colors.primaryDim, borderRadius: radius.md, paddingHorizontal: spacing.sm },
-  parcelRadio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: colors.primary,
+  iconBox: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.primaryDim,
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: spacing.md,
   },
-  parcelRadioFill: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.primary,
-  },
-  parcelName: { fontSize: font.md, fontWeight: "700", color: colors.textPrimary },
-  parcelLocation: { fontSize: font.xs, color: colors.textMuted, marginTop: 2 },
-  parcelSize: {
-    marginLeft: "auto",
+  iconEmoji: { fontSize: 36 },
+  iconSubtitle: {
     fontSize: font.sm,
-    color: colors.primary,
-    fontWeight: "600",
+    color: colors.textSecond,
+    textAlign: "center",
   },
-  dateBtn: {
+  section: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    gap: spacing.md,
+  },
+  fieldWrapper: { gap: spacing.sm },
+  fieldLabel: {
+    fontSize: font.sm,
+    fontWeight: "700",
+    color: colors.textSecond,
+  },
+  passwordRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surfaceAlt,
+    paddingRight: spacing.md,
   },
-  dateBtnText: { fontSize: font.md, color: colors.textPrimary, fontWeight: "600" },
-  textarea: {
-    height: 100,
-    paddingTop: spacing.md,
-    textAlignVertical: "top",
+  inputError: { borderColor: colors.error, backgroundColor: colors.errorDim },
+  passwordInput: {
+    flex: 1,
+    height: 50,
+    paddingHorizontal: spacing.md,
+    fontSize: font.md,
+    color: colors.textPrimary,
   },
-  actions: {
+  eyeBtn: { padding: spacing.xs },
+  eyeIcon: { fontSize: 18 },
+  errorText: { color: colors.error, fontSize: font.xs },
+  divider: { height: 1, backgroundColor: colors.border },
+  strengthWrapper: {
     flexDirection: "row",
+    alignItems: "center",
     gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
   },
+  strengthBars: { flexDirection: "row", gap: spacing.xs, flex: 1 },
+  strengthBar: { height: 4, flex: 1, borderRadius: 2 },
+  strengthLabel: {
+    fontSize: font.xs,
+    fontWeight: "700",
+    width: 50,
+    textAlign: "right",
+  },
+  tipsCard: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  tipsTitle: { fontSize: font.sm, fontWeight: "700", color: colors.textSecond },
+  tipItem: { fontSize: font.sm, color: colors.textSecond, lineHeight: 22 },
+  btnSave: {
+    backgroundColor: colors.primary,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    paddingVertical: spacing.md + 2,
+    borderRadius: radius.md,
+    alignItems: "center",
+  },
+  btnSaveText: { color: colors.white, fontSize: font.md, fontWeight: "700" },
 });

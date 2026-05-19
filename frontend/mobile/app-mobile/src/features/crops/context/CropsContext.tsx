@@ -25,7 +25,7 @@ import {
 } from "../api/tasksApi";
 
 // ─────────────────────────────────────────────────────────────
-// 🚧 DEV MOCK — quitar cuando el backend esté listo
+// 🚧 DEV MOCK
 // ─────────────────────────────────────────────────────────────
 const DEV_CROPS: Crop[] = [
   {
@@ -94,7 +94,6 @@ const DEV_PARCELS: Parcel[] = [
   { id: "3", name: "Invernadero", location: "Sector C", size: 0.3 },
 ];
 
-// Tasks mock iniciales — almacenadas en contexto para persistir entre pantallas
 const DEV_TASKS_INITIAL: Record<string, Task[]> = {
   "1": [
     {
@@ -333,20 +332,41 @@ export const CropsProvider: React.FC<{ children: React.ReactNode }> = ({
     const task = cropTasks.find((t) => t.id === taskId);
     if (!task) return;
 
+    const becomesCompleted = task.status === "pendiente";
+    const now = new Date().toISOString();
+
     if (isDev()) {
+      // Actualizar status de la tarea
       setTasks((prev) => ({
         ...prev,
         [cropId]: (prev[cropId] ?? []).map((t) =>
           t.id === taskId
-            ? {
-                ...t,
-                status: t.status === "pendiente" ? "completada" : "pendiente",
-              }
+            ? { ...t, status: becomesCompleted ? "completada" : "pendiente" }
             : t,
         ),
       }));
+
+      // FIX: al completar un Riego o Fertilización, reflejar la fecha
+      // en el cultivo para que "Último riego" y "Última fertilización"
+      // se actualicen inmediatamente en la pantalla de detalle
+      if (becomesCompleted) {
+        setCrops((prev) =>
+          prev.map((c) => {
+            if (c.id !== cropId) return c;
+            if (task.type === "Riego") {
+              return { ...c, lastWatering: now, updatedAt: now };
+            }
+            if (task.type === "Fertilización") {
+              return { ...c, lastFertilization: now, updatedAt: now };
+            }
+            return c;
+          }),
+        );
+      }
       return;
     }
+
+    // Modo producción
     const updated = await toggleTaskStatusRequest(taskId, task.status);
     setTasks((prev) => ({
       ...prev,
@@ -354,6 +374,22 @@ export const CropsProvider: React.FC<{ children: React.ReactNode }> = ({
         t.id === taskId ? updated : t,
       ),
     }));
+
+    // ✅ FIX: igual en producción
+    if (becomesCompleted) {
+      setCrops((prev) =>
+        prev.map((c) => {
+          if (c.id !== cropId) return c;
+          if (task.type === "Riego") {
+            return { ...c, lastWatering: now, updatedAt: now };
+          }
+          if (task.type === "Fertilización") {
+            return { ...c, lastFertilization: now, updatedAt: now };
+          }
+          return c;
+        }),
+      );
+    }
   };
 
   const removeTask = async (cropId: string, taskId: string): Promise<void> => {

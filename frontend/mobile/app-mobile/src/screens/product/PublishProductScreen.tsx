@@ -1,6 +1,6 @@
 // src/screens/product/PublishProductScreen.tsx
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   Text,
@@ -11,9 +11,7 @@ import {
   Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
-  Platform,
   Image,
-  FlatList,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
@@ -31,6 +29,7 @@ import {
   ProductUnit,
 } from "../../features/products/types/products.types";
 import { useProducts } from "../../features/products/hooks/useProducts";
+import { useKeyboardAwareScroll } from "../../core/hooks/useKeyboardAwareScroll";
 
 type Nav = NavigationProp<RootStackParamList>;
 
@@ -114,6 +113,8 @@ interface FieldErrors {
 export default function PublishProductScreen() {
   const navigation = useNavigation<Nav>();
   const { createProduct, loading } = useProducts();
+  const { scrollRef, onFocus, kavProps, scrollViewProps } =
+    useKeyboardAwareScroll(32);
 
   const [name, setName] = useState("");
   const [category, setCategory] = useState<ProductCategory>("Semillas");
@@ -128,6 +129,12 @@ export default function PublishProductScreen() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
+  // Refs para scroll automático
+  const nameRef = useRef<View>(null);
+  const priceRef = useRef<View>(null);
+  const stockRef = useRef<View>(null);
+  const descriptionRef = useRef<View>(null);
+
   // ── Imágenes ────────────────────────────────────────────────────────────────
 
   const pickImages = async () => {
@@ -138,7 +145,6 @@ export default function PublishProductScreen() {
       );
       return;
     }
-
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
       Alert.alert(
@@ -147,7 +153,6 @@ export default function PublishProductScreen() {
       );
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsMultipleSelection: true,
@@ -155,7 +160,6 @@ export default function PublishProductScreen() {
       quality: 0.7,
       aspect: [4, 3],
     });
-
     if (!result.canceled) {
       const uris = result.assets.map((a) => a.uri);
       setImages((prev) => [...prev, ...uris].slice(0, MAX_IMAGES));
@@ -170,7 +174,6 @@ export default function PublishProductScreen() {
       );
       return;
     }
-
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") {
       Alert.alert(
@@ -179,19 +182,13 @@ export default function PublishProductScreen() {
       );
       return;
     }
-
     const result = await ImagePicker.launchCameraAsync({
       quality: 0.7,
       aspect: [4, 3],
     });
-
     if (!result.canceled) {
       setImages((prev) => [...prev, result.assets[0].uri].slice(0, MAX_IMAGES));
     }
-  };
-
-  const removeImage = (uri: string) => {
-    setImages((prev) => prev.filter((i) => i !== uri));
   };
 
   const handleAddPhoto = () => {
@@ -236,7 +233,6 @@ export default function PublishProductScreen() {
     const errs = validate();
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
-
     try {
       await createProduct({
         name: name.trim(),
@@ -263,19 +259,13 @@ export default function PublishProductScreen() {
 
   return (
     <SafeAreaView style={shared.screen}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
+      <KeyboardAvoidingView {...kavProps}>
         <ScrollView
+          ref={scrollRef}
+          {...scrollViewProps}
           contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          // Necesario para que los dropdowns con position:absolute no queden
-          // recortados por el ScrollView en Android
           nestedScrollEnabled
         >
-          {/* Header */}
           <View style={styles.header}>
             <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
               <Text style={styles.backButton}>← Volver</Text>
@@ -296,27 +286,25 @@ export default function PublishProductScreen() {
                 ({images.length}/{MAX_IMAGES})
               </Text>
             </Text>
-
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.photoStrip}
             >
-              {/* Miniaturas de imágenes seleccionadas */}
               {images.map((uri) => (
                 <View key={uri} style={styles.thumbWrapper}>
                   <Image source={{ uri }} style={styles.thumb} />
                   <Pressable
                     style={styles.thumbDelete}
-                    onPress={() => removeImage(uri)}
+                    onPress={() =>
+                      setImages((prev) => prev.filter((i) => i !== uri))
+                    }
                     hitSlop={6}
                   >
                     <Text style={styles.thumbDeleteText}>✕</Text>
                   </Pressable>
                 </View>
               ))}
-
-              {/* Botón añadir (visible si no se alcanzó el límite) */}
               {images.length < MAX_IMAGES && (
                 <Pressable
                   style={({ pressed }) => [
@@ -332,14 +320,13 @@ export default function PublishProductScreen() {
                 </Pressable>
               )}
             </ScrollView>
-
             <Text style={styles.photoHint}>
               Hasta {MAX_IMAGES} fotos · Toca una miniatura para eliminarla
             </Text>
           </View>
 
           {/* ── Nombre ────────────────────────────────────────────────────── */}
-          <View style={[shared.card, styles.section]}>
+          <View ref={nameRef} style={[shared.card, styles.section]}>
             <Text style={styles.fieldLabel}>
               Nombre del producto <Text style={styles.required}>*</Text>
             </Text>
@@ -352,6 +339,7 @@ export default function PublishProductScreen() {
                 setName(v);
                 if (touched.name) setErrors(validate());
               }}
+              onFocus={() => onFocus(nameRef)}
               onBlur={() => handleBlur("name")}
               maxLength={80}
             />
@@ -385,14 +373,10 @@ export default function PublishProductScreen() {
           </View>
 
           {/* ── Precio + Unidad ───────────────────────────────────────────── */}
-          {/*
-            FIX: el dropdown de unidad estaba tapado por las cards siguientes
-            porque el zIndex no se propagaba correctamente en React Native.
-            Solución: elevamos el zIndex de toda esta sección y usamos
-            overflow: visible para que el dropdown absoluto sea visible
-            fuera de los límites de su contenedor.
-          */}
-          <View style={[shared.card, styles.section, styles.priceSection]}>
+          <View
+            ref={priceRef}
+            style={[shared.card, styles.section, styles.priceSection]}
+          >
             <Text style={styles.fieldLabel}>
               Precio <Text style={styles.required}>*</Text>
             </Text>
@@ -410,12 +394,10 @@ export default function PublishProductScreen() {
                   setPrice(v);
                   if (touched.price) setErrors(validate());
                 }}
+                onFocus={() => onFocus(priceRef)}
                 onBlur={() => handleBlur("price")}
                 keyboardType="decimal-pad"
               />
-
-              {/* Selector de unidad — zIndex elevado para que el dropdown
-                  flote por encima de las cards inferiores */}
               <View style={styles.unitWrapper}>
                 <Pressable
                   style={[
@@ -430,7 +412,6 @@ export default function PublishProductScreen() {
                   <Text style={styles.unitSelectorText}>{unit}</Text>
                   <Text style={styles.arrow}>{showUnitPicker ? "▲" : "▼"}</Text>
                 </Pressable>
-
                 {showUnitPicker && (
                   <View style={styles.unitDropdown}>
                     {UNITS.map((u) => (
@@ -465,7 +446,7 @@ export default function PublishProductScreen() {
           </View>
 
           {/* ── Stock ─────────────────────────────────────────────────────── */}
-          <View style={[shared.card, styles.section]}>
+          <View ref={stockRef} style={[shared.card, styles.section]}>
             <Text style={styles.fieldLabel}>
               Stock disponible <Text style={styles.required}>*</Text>
             </Text>
@@ -478,6 +459,7 @@ export default function PublishProductScreen() {
                 setStock(v);
                 if (touched.stock) setErrors(validate());
               }}
+              onFocus={() => onFocus(stockRef)}
               onBlur={() => handleBlur("stock")}
               keyboardType="number-pad"
             />
@@ -487,7 +469,7 @@ export default function PublishProductScreen() {
           </View>
 
           {/* ── Descripción ───────────────────────────────────────────────── */}
-          <View style={[shared.card, styles.section]}>
+          <View ref={descriptionRef} style={[shared.card, styles.section]}>
             <Text style={styles.fieldLabel}>
               Descripción <Text style={styles.required}>*</Text>
             </Text>
@@ -504,6 +486,7 @@ export default function PublishProductScreen() {
                 setDescription(v);
                 if (touched.description) setErrors(validate());
               }}
+              onFocus={() => onFocus(descriptionRef)}
               onBlur={() => handleBlur("description")}
               multiline
               numberOfLines={4}
@@ -587,8 +570,6 @@ export default function PublishProductScreen() {
   );
 }
 
-// ─── Estilos ──────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
   scrollContent: { paddingBottom: spacing.xxxl + spacing.xl },
   header: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
@@ -601,8 +582,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   section: { marginHorizontal: spacing.lg, marginBottom: spacing.md },
-
-  // ── Fotos
   photoStrip: {
     flexDirection: "row",
     gap: spacing.sm,
@@ -652,8 +631,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     marginTop: spacing.xs,
   },
-
-  // ── Campos
   fieldLabel: {
     fontSize: font.sm,
     fontWeight: "700",
@@ -701,26 +678,15 @@ const styles = StyleSheet.create({
   chipEmoji: { fontSize: 13 },
   chipText: { fontSize: font.sm, fontWeight: "600", color: colors.textSecond },
   chipTextActive: { color: colors.primary },
-
-  // ── Precio + Unidad (FIX zIndex)
-  priceSection: {
-    // Elevamos esta card por encima de todas las que vienen después
-    zIndex: 20,
-    overflow: "visible",
-  },
+  priceSection: { zIndex: 20, overflow: "visible" },
   priceRow: {
     flexDirection: "row",
     gap: spacing.sm,
     alignItems: "flex-start",
-    // overflow visible para que el dropdown no quede recortado
     overflow: "visible",
   },
   priceInput: { flex: 1 },
-  unitWrapper: {
-    // Contenedor con zIndex propio y overflow visible
-    zIndex: 20,
-    overflow: "visible",
-  },
+  unitWrapper: { zIndex: 20, overflow: "visible" },
   unitSelector: {
     height: 50,
     paddingHorizontal: spacing.md,
@@ -744,7 +710,6 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   arrow: { fontSize: 10, color: colors.textMuted },
-  // El dropdown flota encima con position absolute + zIndex alto
   unitDropdown: {
     position: "absolute",
     top: 54,
@@ -761,8 +726,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 20,
   },
-
-  // ── Provincia
   provinceSelector: {
     height: 50,
     paddingHorizontal: spacing.md,
@@ -787,10 +750,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  dropdownItem: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-  },
+  dropdownItem: { paddingVertical: spacing.md, paddingHorizontal: spacing.md },
   dropdownItemActive: { backgroundColor: colors.primaryDim },
   dropdownText: {
     fontSize: font.sm,
@@ -798,8 +758,6 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   dropdownTextActive: { color: colors.primary, fontWeight: "700" },
-
-  // ── Publicar
   btnPublish: {
     backgroundColor: colors.primary,
     marginHorizontal: spacing.lg,
@@ -808,9 +766,5 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     alignItems: "center",
   },
-  btnPublishText: {
-    color: colors.white,
-    fontSize: font.md,
-    fontWeight: "700",
-  },
+  btnPublishText: { color: colors.white, fontSize: font.md, fontWeight: "700" },
 });

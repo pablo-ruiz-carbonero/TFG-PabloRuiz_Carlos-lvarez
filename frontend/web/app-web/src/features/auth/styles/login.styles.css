@@ -1,0 +1,142 @@
+/* BACKGROUND */
+.mainBox {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+
+  background-size: cover;
+  background-position: center;
+}
+
+/* OVERLAY */
+.mainBox::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 0;
+}
+
+/* LOGIN BOX */
+.authBox {
+  position: relative;
+  z-index: 1;
+
+  width: 360px;
+  padding: 32px;
+
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+
+  border: none;
+  border-radius: 16px;
+
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+
+  color: var(--color-text-inverse);
+  text-align: center;
+
+  animation: fadeInUp 0.5s ease;
+}
+
+/* TITLES */
+.title {
+  font-size: 24px;
+  margin-bottom: 6px;
+  color: var(--color-text-inverse);
+}
+
+.subtitle {
+  font-size: 14px;
+  margin-bottom: 20px;
+  color: var(--color-text-inverse);
+  opacity: 0.8;
+}
+
+/* FORM */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* INPUTS */
+.form input {
+  padding: 12px;
+  border-radius: 10px;
+
+  border: none;
+  background: rgba(255, 255, 255, 0.06);
+
+  color: var(--color-text-inverse);
+
+  outline: none;
+  transition: all 0.25s ease;
+}
+
+.form input::placeholder {
+  color: var(--color-text-inverse);
+}
+
+.form input:focus {
+  border-color: var(--color-border-focus);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* BUTTON */
+.form button {
+  padding: 12px;
+  border-radius: 10px;
+
+  background: linear-gradient(
+    90deg,
+    var(--color-primary),
+    var(--color-primary-light)
+  );
+
+  color: var(--color-text-inverse);
+  font-weight: 600;
+
+  border: none;
+  cursor: pointer;
+
+  transition: all 0.25s ease;
+}
+
+.form button:hover {
+  transform: translateY(-2px);
+  opacity: 0.9;
+}
+
+/* FOOTER */
+.footerText {
+  margin-top: 15px;
+  font-size: 13px;
+  color: var(--color-text-inverse);
+  opacity: 0.8;
+}
+
+.footerText .registerRoute {
+  color: var(--color-primary-light);
+  cursor: pointer;
+}
+
+.footerText .registerRoute:hover {
+  color: var(--color-text-inverse);
+  cursor: pointer;
+}
+
+/* ANIMATION */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

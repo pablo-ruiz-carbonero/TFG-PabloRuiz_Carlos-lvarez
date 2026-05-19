@@ -10,9 +10,12 @@ async function bootstrap() {
         forbidNonWhitelisted: true,
         transform: true,
     }));
-    app.enableCors();
-    await app.listen(3000, '0.0.0.0');
-    console.log('🚀 Backend corriendo en http://localhost:3000');
+    app.enableCors({
+        origin: true,
+        credentials: true,
+    });
+    await app.listen(3000, "0.0.0.0");
+    console.log("🚀 Backend corriendo en http://localhost:3000");
 }
 bootstrap();
 //# sourceMappingURL=main.js.map

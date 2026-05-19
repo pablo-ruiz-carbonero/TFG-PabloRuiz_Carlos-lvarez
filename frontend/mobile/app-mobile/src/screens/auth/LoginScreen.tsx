@@ -26,7 +26,7 @@ export default function LoginScreen(): JSX.Element {
   const navigation = useNavigation<NavigationProp>();
 
   const { login, devLogin, isDevMode } = useAuth();
-  const { loading, execute } = useAuthForm();
+  const { loading, error, execute } = useAuthForm();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -35,6 +35,10 @@ export default function LoginScreen(): JSX.Element {
   const slideAnim = useRef(new Animated.Value(50)).current;
 
   const isValidEmail = (value: string) => value.includes("@");
+
+  useEffect(() => {
+    if (error) Alert.alert("Error", error);
+  }, [error]);
 
   const handleLogin = () => {
     if (!email || !password) {

@@ -1,6 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  CreateDateColumn,
+} from "typeorm";
 
-@Entity('usuarios')
+@Entity("usuarios")
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
@@ -14,13 +21,15 @@ export class User {
   @Column({ length: 255 })
   password: string;
 
-  @Column({ length: 20, nullable: true })
+  // FIX: columna explícitamente nombrada para que TypeORM no intente
+  //    adivinarla. Coincide con ALTER TABLE o el schema.sql actualizado.
+  @Column({ name: "telefono", length: 20, nullable: true })
   telefono: string;
 
-  @ManyToOne('Role')
-  @JoinColumn({ name: 'rol_id' })
+  @ManyToOne("Role")
+  @JoinColumn({ name: "rol_id" })
   role: any;
 
-  @CreateDateColumn({ name: 'fecha_creacion' })
+  @CreateDateColumn({ name: "fecha_creacion" })
   fechaCreacion: Date;
 }

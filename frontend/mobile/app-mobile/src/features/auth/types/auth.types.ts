@@ -1,20 +1,19 @@
 // src/features/auth/types/auth.types.ts
-// ✅ User extendido con campos de perfil completo
 
+// FIX: los campos coinciden EXACTAMENTE con lo que devuelve el backend.
+//    Antes: "name", "phone" → Ahora: "nombre", "telefono" (igual que la BD)
 export interface User {
-  id: string;
+  id: number;
   email: string;
-  name?: string;
-  phone?: string;
-  role?: string;
-  location?: string;
-  bio?: string;
+  nombre?: string;
+  telefono?: string;
+  rol?: string;
 }
 
-// Iniciales generadas a partir del nombre
+// Helper para mostrar iniciales en avatar
 export const getUserInitials = (user: User): string => {
-  if (!user.name) return user.email.slice(0, 2).toUpperCase();
-  return user.name
+  if (!user.nombre) return user.email.slice(0, 2).toUpperCase();
+  return user.nombre
     .split(" ")
     .slice(0, 2)
     .map((w) => w[0])
@@ -22,9 +21,10 @@ export const getUserInitials = (user: User): string => {
     .toUpperCase();
 };
 
+// FIX: el campo del token es "accessToken" (antes "token")
 export interface AuthResponse {
-  user: User;
   accessToken: string;
+  user: User;
 }
 
 export interface LoginDto {
@@ -32,18 +32,18 @@ export interface LoginDto {
   password: string;
 }
 
+// FIX: "nombre" y "telefono" coinciden con el RegisterDto del backend
 export interface RegisterDto {
   email: string;
   password: string;
-  name?: string;
+  nombre?: string;
+  telefono?: string;
 }
 
 export interface UpdateProfileDto {
-  name?: string;
-  phone?: string;
-  role?: string;
-  location?: string;
-  bio?: string;
+  nombre?: string;
+  telefono?: string;
+  rol?: string;
 }
 
 export interface ChangePasswordDto {
