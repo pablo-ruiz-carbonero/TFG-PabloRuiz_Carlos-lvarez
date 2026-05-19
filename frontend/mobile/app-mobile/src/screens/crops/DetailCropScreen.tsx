@@ -1,4 +1,4 @@
-// src/screens/DetailCorpScreen.tsx
+// src/screens/crops/DetailCropScreen.tsx
 
 import React, { useCallback, useState } from "react";
 import {
@@ -19,6 +19,7 @@ import {
   NavigationProp,
   useFocusEffect,
 } from "@react-navigation/native";
+import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 import {
   colors,
   shared,
@@ -35,14 +36,18 @@ import {
 import { useCropDetail } from "../../features/crops/hooks/useCropDetail";
 import { useCrops } from "../../features/crops/hooks/useCrops";
 
-type RouteP = RouteProp<RootStackParamList, "DetailCorpScreen">;
+type RouteP = RouteProp<RootStackParamList, "DetailCropScreen">;
 type Nav = NavigationProp<RootStackParamList>;
 
-const TASK_ICON: Record<TaskType, string> = {
-  Siembra: "🌱",
-  Riego: "💧",
-  Fertilización: "🧪",
-  Cosecha: "🌾",
+type TaskIconName =
+  | React.ComponentProps<typeof MaterialIcons>["name"]
+  | React.ComponentProps<typeof MaterialCommunityIcons>["name"];
+
+const TASK_ICON: Record<TaskType, { lib: "mi" | "mci"; name: string }> = {
+  Siembra: { lib: "mci", name: "sprout" },
+  Riego: { lib: "mi", name: "water-drop" },
+  Fertilización: { lib: "mci", name: "flask-outline" },
+  Cosecha: { lib: "mci", name: "corn" },
 };
 
 // Fases en orden de ciclo de vida
@@ -65,7 +70,41 @@ const PHASE_COLOR: Record<CropPhase, string> = {
 const fmt = (iso?: string, opts?: Intl.DateTimeFormatOptions) =>
   iso ? new Date(iso).toLocaleDateString("es-ES", opts) : "No definida";
 
-export default function DetailCorpScreen() {
+function TaskIconComponent({
+  type,
+  size = 14,
+}: {
+  type: TaskType;
+  size?: number;
+}) {
+  const def = TASK_ICON[type];
+  if (!def)
+    return (
+      <MaterialIcons name="push-pin" size={size} color={colors.textSecond} />
+    );
+  if (def.lib === "mci") {
+    return (
+      <MaterialCommunityIcons
+        name={
+          def.name as React.ComponentProps<
+            typeof MaterialCommunityIcons
+          >["name"]
+        }
+        size={size}
+        color={colors.textSecond}
+      />
+    );
+  }
+  return (
+    <MaterialIcons
+      name={def.name as React.ComponentProps<typeof MaterialIcons>["name"]}
+      size={size}
+      color={colors.textSecond}
+    />
+  );
+}
+
+export default function DetailCropScreen() {
   const route = useRoute<RouteP>();
   const navigation = useNavigation<Nav>();
   const { cropId } = route.params;
@@ -190,7 +229,12 @@ export default function DetailCorpScreen() {
                 { color: PHASE_COLOR[crop.currentPhase] },
               ]}
             >
-              {crop.currentPhase} ✎
+              {crop.currentPhase}{" "}
+              <MaterialIcons
+                name="edit"
+                size={12}
+                color={PHASE_COLOR[crop.currentPhase]}
+              />
             </Text>
           </Pressable>
         </View>
@@ -256,7 +300,16 @@ export default function DetailCorpScreen() {
         </View>
 
         {/* Dates */}
-        <Section title="📅 Fechas">
+        <Section
+          title="Fechas"
+          titleIcon={
+            <MaterialIcons
+              name="calendar-today"
+              size={16}
+              color={colors.textSecond}
+            />
+          }
+        >
           <DateRow
             label="Siembra"
             value={fmt(crop.seedDate, {
@@ -278,7 +331,14 @@ export default function DetailCorpScreen() {
 
         {/* Pending tasks */}
         <Section
-          title="📋 Tareas pendientes"
+          title="Tareas pendientes"
+          titleIcon={
+            <MaterialIcons
+              name="assignment"
+              size={16}
+              color={colors.textSecond}
+            />
+          }
           action={
             <Pressable style={styles.btnAddTask} onPress={() => goToNewTask()}>
               <Text style={styles.btnAddTaskText}>+ Nueva</Text>
@@ -287,9 +347,12 @@ export default function DetailCorpScreen() {
         >
           {pendingTasks.length === 0 ? (
             <View style={styles.emptyTasks}>
-              <Text style={styles.emptyTasksText}>
-                Sin tareas pendientes 🎉
-              </Text>
+              <MaterialIcons
+                name="check-circle-outline"
+                size={32}
+                color={colors.primary}
+              />
+              <Text style={styles.emptyTasksText}>Sin tareas pendientes</Text>
               <Text style={styles.emptyTasksSub}>
                 Añade una para hacer seguimiento
               </Text>
@@ -308,7 +371,16 @@ export default function DetailCorpScreen() {
 
         {/* Completed tasks */}
         {completedTasks.length > 0 && (
-          <Section title={`✅ Completadas (${completedTasks.length})`}>
+          <Section
+            title={`Completadas (${completedTasks.length})`}
+            titleIcon={
+              <MaterialIcons
+                name="check-circle"
+                size={16}
+                color={colors.primary}
+              />
+            }
+          >
             {completedTasks.map((t) => (
               <TaskRow
                 key={t.id}
@@ -322,7 +394,16 @@ export default function DetailCorpScreen() {
         )}
 
         {/* Watering */}
-        <Section title="💧 Riego">
+        <Section
+          title="Riego"
+          titleIcon={
+            <MaterialIcons
+              name="water-drop"
+              size={16}
+              color={colors.textSecond}
+            />
+          }
+        >
           <View style={styles.infoRow}>
             <View>
               <Text style={styles.infoLabel}>Último riego</Text>
@@ -342,12 +423,27 @@ export default function DetailCorpScreen() {
             style={[shared.btnPrimary, { marginTop: spacing.md }]}
             onPress={() => goToNewTask("Riego")}
           >
-            <Text style={shared.btnPrimaryText}>💧 Registrar riego</Text>
+            <MaterialIcons
+              name="water-drop"
+              size={16}
+              color={colors.white}
+              style={{ marginRight: spacing.xs }}
+            />
+            <Text style={shared.btnPrimaryText}>Registrar riego</Text>
           </Pressable>
         </Section>
 
         {/* Fertilization */}
-        <Section title="🧪 Fertilización">
+        <Section
+          title="Fertilización"
+          titleIcon={
+            <MaterialCommunityIcons
+              name="flask-outline"
+              size={16}
+              color={colors.textSecond}
+            />
+          }
+        >
           <View style={styles.infoRow}>
             <View>
               <Text style={styles.infoLabel}>Última fertilización</Text>
@@ -370,21 +466,39 @@ export default function DetailCorpScreen() {
             style={[shared.btnPrimary, { marginTop: spacing.md }]}
             onPress={() => goToNewTask("Fertilización")}
           >
-            <Text style={shared.btnPrimaryText}>
-              🧪 Registrar fertilización
-            </Text>
+            <MaterialCommunityIcons
+              name="flask-outline"
+              size={16}
+              color={colors.white}
+              style={{ marginRight: spacing.xs }}
+            />
+            <Text style={shared.btnPrimaryText}>Registrar fertilización</Text>
           </Pressable>
         </Section>
 
         {/* Notes */}
         {crop.notes && (
-          <Section title="📝 Notas">
+          <Section
+            title="Notas"
+            titleIcon={
+              <MaterialIcons name="notes" size={16} color={colors.textSecond} />
+            }
+          >
             <Text style={styles.notes}>{crop.notes}</Text>
           </Section>
         )}
 
         {/* Location */}
-        <Section title="📍 Parcela">
+        <Section
+          title="Parcela"
+          titleIcon={
+            <MaterialIcons
+              name="location-on"
+              size={16}
+              color={colors.textSecond}
+            />
+          }
+        >
           <Text style={styles.infoValue}>{crop.parcelName}</Text>
         </Section>
 
@@ -480,17 +594,29 @@ export default function DetailCorpScreen() {
 
 function Section({
   title,
+  titleIcon,
   action,
   children,
 }: {
   title: string;
+  titleIcon?: React.ReactNode;
   action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <View style={[shared.card, styles.section]}>
       <View style={styles.sectionHeader}>
-        <Text style={shared.sectionTitle}>{title}</Text>
+        <View style={styles.sectionTitleRow}>
+          {titleIcon}
+          <Text
+            style={[
+              shared.sectionTitle,
+              { marginLeft: titleIcon ? spacing.xs : 0 },
+            ]}
+          >
+            {title}
+          </Text>
+        </View>
         {action}
       </View>
       {children}
@@ -562,7 +688,7 @@ function TaskRow({
 
       <View style={{ flex: 1 }}>
         <View style={styles.taskMeta}>
-          <Text style={styles.taskIcon}>{TASK_ICON[task.type] ?? "📌"}</Text>
+          <TaskIconComponent type={task.type} size={14} />
           <Text style={[styles.taskType, done && styles.taskTypeDone]}>
             {task.type}
           </Text>
@@ -584,7 +710,7 @@ function TaskRow({
       </View>
 
       <Pressable onPress={onDelete} hitSlop={8}>
-        <Text style={styles.deleteBtn}>✕</Text>
+        <MaterialIcons name="close" size={16} color={colors.textMuted} />
       </Pressable>
     </View>
   );
@@ -613,6 +739,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: "transparent",
+    flexDirection: "row",
+    alignItems: "center",
   },
   phaseBadgeText: {
     fontWeight: "700",
@@ -727,6 +855,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: spacing.sm,
   },
+  sectionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
   btnAddTask: {
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.md,
@@ -793,7 +925,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   btnDangerText: { color: colors.white, fontWeight: "600", fontSize: font.md },
-  emptyTasks: { paddingVertical: spacing.lg, alignItems: "center" },
+  emptyTasks: {
+    paddingVertical: spacing.lg,
+    alignItems: "center",
+    gap: spacing.sm,
+  },
   emptyTasksText: {
     fontSize: font.md,
     fontWeight: "700",
@@ -837,7 +973,6 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     flexWrap: "wrap",
   },
-  taskIcon: { fontSize: 14 },
   taskType: { fontSize: font.sm, fontWeight: "700", color: colors.textPrimary },
   taskTypeDone: { textDecorationLine: "line-through", color: colors.textMuted },
   taskDate: { fontSize: font.xs, color: colors.textMuted, marginLeft: "auto" },
@@ -852,11 +987,6 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: "600",
     marginTop: spacing.xs,
-  },
-  deleteBtn: {
-    color: colors.textMuted,
-    fontSize: font.sm,
-    paddingLeft: spacing.sm,
   },
   // ── Modal de fase
   modalOverlay: {

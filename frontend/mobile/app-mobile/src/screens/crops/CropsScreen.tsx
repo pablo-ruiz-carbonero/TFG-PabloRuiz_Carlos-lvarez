@@ -13,15 +13,15 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   useNavigation,
-  NavigationProp,
   useFocusEffect,
 } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { colors, shared, spacing, font, radius } from "../../styles/Globaltheme";
 import { RootStackParamList } from "../../types/navigation";
 import { Crop } from "../../features/crops/types/crops.types";
 import { useCrops } from "../../features/crops/hooks/useCrops";
 
-type Nav = NavigationProp<RootStackParamList>;
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function CropsScreen() {
   const navigation = useNavigation<Nav>();
@@ -52,7 +52,7 @@ export default function CropsScreen() {
       <Pressable
         style={({ pressed }) => [styles.card, pressed && { opacity: 0.8 }]}
         onPress={() =>
-          navigation.navigate("DetailCorpScreen", { cropId: item.id })
+          navigation.navigate("DetailCropScreen", { cropId: item.id })
         }
       >
         <View style={styles.cardHeader}>
@@ -100,7 +100,7 @@ export default function CropsScreen() {
         <Text style={styles.title}>Mis Cultivos</Text>
         <Pressable
           style={({ pressed }) => [styles.btnNew, pressed && { opacity: 0.8 }]}
-          onPress={() => navigation.navigate("NewCorpScreen")}
+          onPress={() => navigation.navigate("NewCropScreen")}
         >
           <Text style={styles.btnNewText}>+ Nuevo</Text>
         </Pressable>
@@ -135,7 +135,7 @@ export default function CropsScreen() {
           {!query && (
             <Pressable
               style={styles.btnCreate}
-              onPress={() => navigation.navigate("NewCorpScreen")}
+              onPress={() => navigation.navigate("NewCropScreen")}
             >
               <Text style={styles.btnCreateText}>Crear primer cultivo</Text>
             </Pressable>

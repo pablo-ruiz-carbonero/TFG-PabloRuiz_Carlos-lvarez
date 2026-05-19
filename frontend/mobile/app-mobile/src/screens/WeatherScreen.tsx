@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
+import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { colors, shared, spacing, font, radius } from "../styles/Globaltheme";
 import { RootStackParamList } from "../types/navigation";
@@ -47,7 +48,11 @@ function ForecastItem({ day }: { day: ForecastDay }) {
   return (
     <View style={styles.forecastDay}>
       <Text style={styles.forecastDayName}>{day.dayLabel}</Text>
-      <Text style={styles.forecastEmoji}>{day.emoji}</Text>
+      <MaterialCommunityIcons
+        name="weather-partly-cloudy"
+        size={22}
+        color={colors.primary}
+      />
       <Text style={styles.forecastHigh}>{day.high}°</Text>
       <Text style={styles.forecastLow}>{day.low}°</Text>
     </View>
@@ -83,13 +88,13 @@ function StatBox({
   label,
   value,
 }: {
-  icon: string;
+  icon: React.ComponentProps<typeof MaterialIcons>["name"];
   label: string;
   value: string;
 }) {
   return (
     <View style={styles.statBox}>
-      <Text style={styles.statIcon}>{icon}</Text>
+      <MaterialIcons name={icon} size={20} color={colors.primary} />
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
@@ -172,10 +177,17 @@ export default function WeatherScreen() {
                 style={styles.locationRowLeft}
                 onPress={() => setEditingLocation(true)}
               >
-                <Text style={styles.locationText}>
-                  📍 {(current?.city ?? currentCity) || "..."}
-                  {current?.country ? `, ${current.country}` : ""}
-                </Text>
+                <View style={styles.locationTextRow}>
+                  <MaterialIcons
+                    name="location-on"
+                    size={16}
+                    color={colors.primary}
+                  />
+                  <Text style={styles.locationText}>
+                    {(current?.city ?? currentCity) || "..."}
+                    {current?.country ? `, ${current.country}` : ""}
+                  </Text>
+                </View>
                 <Text style={styles.locationChange}>Cambiar ubicación →</Text>
               </Pressable>
               <Pressable
@@ -183,7 +195,15 @@ export default function WeatherScreen() {
                 onPress={requestLocation}
                 disabled={locating}
               >
-                <Text style={styles.gpsBtnText}>{locating ? "..." : "🎯"}</Text>
+                {locating ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <MaterialIcons
+                    name="my-location"
+                    size={20}
+                    color={colors.primary}
+                  />
+                )}
               </Pressable>
             </View>
           )}
@@ -197,7 +217,11 @@ export default function WeatherScreen() {
           </View>
         ) : displayError ? (
           <View style={styles.center}>
-            <Text style={styles.errorEmoji}>⚠️</Text>
+            <MaterialIcons
+              name="warning-amber"
+              size={48}
+              color={colors.warning}
+            />
             <Text style={styles.errorText}>{displayError}</Text>
             <Pressable
               style={styles.retryBtn}
@@ -215,9 +239,11 @@ export default function WeatherScreen() {
             <View style={[shared.card, styles.mainCard]}>
               <Text style={styles.mainTemp}>{current.temp}°C</Text>
               <View style={styles.conditionBadge}>
-                <Text style={styles.conditionEmoji}>
-                  {current.conditionEmoji}
-                </Text>
+                <MaterialCommunityIcons
+                  name="weather-sunny"
+                  size={18}
+                  color={colors.primary}
+                />
                 <Text style={styles.conditionText}>{current.condition}</Text>
               </View>
               <Text style={styles.feelsLike}>
@@ -229,26 +255,34 @@ export default function WeatherScreen() {
             {/* ── Stats secundarias ─────────────────────────────────────── */}
             <View style={[shared.card, styles.statsCard]}>
               <StatBox
-                icon="💧"
+                icon="water-drop"
                 label="Humedad"
                 value={`${current.humidity}%`}
               />
               <View style={styles.statDivider} />
               <StatBox
-                icon="💨"
+                icon="air"
                 label="Viento"
                 value={`${current.windSpeed} km/h`}
               />
               <View style={styles.statDivider} />
               <StatBox
-                icon="👁️"
+                icon="visibility"
                 label="Visib."
                 value={`${current.visibility} km`}
               />
               <View style={styles.statDivider} />
-              <StatBox icon="🌅" label="Amanecer" value={current.sunrise} />
+              <StatBox
+                icon="wb-twilight"
+                label="Amanecer"
+                value={current.sunrise}
+              />
               <View style={styles.statDivider} />
-              <StatBox icon="🌇" label="Atardecer" value={current.sunset} />
+              <StatBox
+                icon="nights-stay"
+                label="Atardecer"
+                value={current.sunset}
+              />
             </View>
 
             {/* ── Previsión 5 días ──────────────────────────────────────── */}
@@ -275,8 +309,10 @@ export default function WeatherScreen() {
 
             {/* ── Timestamp de actualización ───────────────────────────── */}
             <View style={styles.updatedNote}>
+              <MaterialIcons name="sync" size={13} color={colors.primary} />
               <Text style={styles.updatedText}>
-                🔄 Actualizado{" "}
+                {" "}
+                Actualizado{" "}
                 {new Date(current.fetchedAt).toLocaleTimeString("es-ES", {
                   hour: "2-digit",
                   minute: "2-digit",
@@ -327,6 +363,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   locationRowLeft: { flex: 1 },
+  locationTextRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
   locationText: {
     fontSize: font.md,
     fontWeight: "700",
@@ -371,7 +412,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginLeft: spacing.sm,
   },
-  gpsBtnText: { fontSize: 18 },
 
   // Loading / error
   center: {
@@ -382,7 +422,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   loadingText: { color: colors.textSecond, fontSize: font.md },
-  errorEmoji: { fontSize: 48 },
   errorText: {
     color: colors.error,
     fontSize: font.md,
@@ -420,7 +459,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     marginTop: spacing.md,
   },
-  conditionEmoji: { fontSize: 18 },
   conditionText: {
     fontSize: font.md,
     fontWeight: "700",
@@ -442,7 +480,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   statBox: { flex: 1, alignItems: "center", gap: 3 },
-  statIcon: { fontSize: 18 },
   statValue: {
     fontSize: font.sm,
     fontWeight: "800",
@@ -472,7 +509,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontWeight: "700",
   },
-  forecastEmoji: { fontSize: 22 },
   forecastHigh: {
     fontSize: font.sm,
     fontWeight: "800",
@@ -501,6 +537,9 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     backgroundColor: colors.primaryDim,
     borderRadius: radius.md,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
   updatedText: {
     fontSize: font.xs,

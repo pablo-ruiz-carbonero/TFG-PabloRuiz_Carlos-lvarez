@@ -24,8 +24,8 @@ export type RootStackParamList = {
     | undefined;
 
   // ── Crops ────────────────────────────────────────────────────────────────────
-  NewCorpScreen: undefined;
-  DetailCorpScreen: { cropId: string };
+  NewCropScreen: undefined;
+  DetailCropScreen: { cropId: string };
   NewTask: { cropId: string; preselect?: string };
 
   // ── Marketplace ──────────────────────────────────────────────────────────────

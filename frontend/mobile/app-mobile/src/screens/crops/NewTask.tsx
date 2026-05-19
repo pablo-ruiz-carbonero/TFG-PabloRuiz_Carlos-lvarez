@@ -20,6 +20,7 @@ import {
   RouteProp,
 } from "@react-navigation/native";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 import {
   colors,
@@ -39,11 +40,47 @@ import { useKeyboardAwareScroll } from "../../core/hooks/useKeyboardAwareScroll"
 type Nav = NavigationProp<RootStackParamList>;
 type RouteP = RouteProp<RootStackParamList, "NewTask">;
 
-const TASK_TYPES: { type: TaskType; icon: string; label: string }[] = [
-  { type: "Siembra", icon: "🌱", label: "Siembra" },
-  { type: "Riego", icon: "💧", label: "Riego" },
-  { type: "Fertilización", icon: "🧪", label: "Fertilización" },
-  { type: "Cosecha", icon: "🌾", label: "Cosecha" },
+const TASK_TYPES: {
+  type: TaskType;
+  icon: React.ReactNode;
+  label: string;
+}[] = [
+  {
+    type: "Siembra",
+    icon: (
+      <MaterialCommunityIcons
+        name="sprout"
+        size={28}
+        color={colors.textSecond}
+      />
+    ),
+    label: "Siembra",
+  },
+  {
+    type: "Riego",
+    icon: (
+      <MaterialIcons name="water-drop" size={28} color={colors.textSecond} />
+    ),
+    label: "Riego",
+  },
+  {
+    type: "Fertilización",
+    icon: (
+      <MaterialCommunityIcons
+        name="flask-outline"
+        size={28}
+        color={colors.textSecond}
+      />
+    ),
+    label: "Fertilización",
+  },
+  {
+    type: "Cosecha",
+    icon: (
+      <MaterialCommunityIcons name="corn" size={28} color={colors.textSecond} />
+    ),
+    label: "Cosecha",
+  },
 ];
 
 const UNITS = ["Litros", "kg", "g", "ml", "unidades"];
@@ -111,6 +148,8 @@ export default function NewTask() {
     }
   };
 
+  const summaryIcon = TASK_TYPES.find((t) => t.type === taskType);
+
   return (
     <SafeAreaView style={shared.screen}>
       <KeyboardAvoidingView {...kavProps}>
@@ -141,7 +180,10 @@ export default function NewTask() {
                   ]}
                   onPress={() => setTaskType(type)}
                 >
-                  <Text style={styles.typeIcon}>{icon}</Text>
+                  {React.cloneElement(icon as React.ReactElement, {
+                    color:
+                      taskType === type ? colors.primary : colors.textSecond,
+                  })}
                   <Text
                     style={[
                       styles.typeLabel,
@@ -164,7 +206,14 @@ export default function NewTask() {
               onPress={() => setShowDatePicker(true)}
             >
               <Text style={styles.dateBtnLabel}>Fecha</Text>
-              <Text style={styles.dateBtnValue}>📅 {fmtDate(date)}</Text>
+              <View style={styles.dateBtnValueRow}>
+                <MaterialIcons
+                  name="calendar-today"
+                  size={16}
+                  color={colors.primary}
+                />
+                <Text style={styles.dateBtnValue}> {fmtDate(date)}</Text>
+              </View>
             </Pressable>
 
             {showDatePicker && (
@@ -201,7 +250,14 @@ export default function NewTask() {
                   onPress={() => setShowTimePicker(true)}
                 >
                   <Text style={styles.dateBtnLabel}>Hora</Text>
-                  <Text style={styles.dateBtnValue}>🕐 {fmtTime(time)}</Text>
+                  <View style={styles.dateBtnValueRow}>
+                    <MaterialIcons
+                      name="access-time"
+                      size={16}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.dateBtnValue}> {fmtTime(time)}</Text>
+                  </View>
                 </Pressable>
 
                 {showTimePicker && (
@@ -280,12 +336,19 @@ export default function NewTask() {
           {/* Resumen */}
           <View style={styles.summary}>
             <Text style={styles.summaryTitle}>Resumen</Text>
-            <Text style={styles.summaryText}>
-              {TASK_TYPES.find((t) => t.type === taskType)?.icon} {taskType} el{" "}
-              {fmtDate(date)}
-              {includeTime ? ` a las ${fmtTime(time)}` : ""}
-              {quantity ? ` · ${quantity} ${unit}` : ""}
-            </Text>
+            <View style={styles.summaryBody}>
+              {summaryIcon &&
+                React.cloneElement(summaryIcon.icon as React.ReactElement, {
+                  size: 16,
+                  color: colors.primary,
+                })}
+              <Text style={styles.summaryText}>
+                {" "}
+                {taskType} el {fmtDate(date)}
+                {includeTime ? ` a las ${fmtTime(time)}` : ""}
+                {quantity ? ` · ${quantity} ${unit}` : ""}
+              </Text>
+            </View>
           </View>
 
           {/* Actions */}
@@ -356,7 +419,6 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     backgroundColor: colors.primaryDim,
   },
-  typeIcon: { fontSize: 28 },
   typeLabel: {
     fontSize: font.sm,
     fontWeight: "600",
@@ -376,6 +438,10 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontWeight: "600",
     marginBottom: 4,
+  },
+  dateBtnValueRow: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   dateBtnValue: {
     fontSize: font.md,
@@ -444,6 +510,10 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 0.8,
     marginBottom: spacing.xs,
+  },
+  summaryBody: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   summaryText: {
     fontSize: font.sm,

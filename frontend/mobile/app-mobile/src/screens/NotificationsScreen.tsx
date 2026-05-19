@@ -1,20 +1,17 @@
 // src/screens/NotificationsScreen.tsx
-import React, { useState, useCallback } from "react";
+
+import React, { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   Pressable,
   FlatList,
-  ActivityIndicator,
   Switch,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  useNavigation,
-  NavigationProp,
-  useFocusEffect,
-} from "@react-navigation/native";
+import { useNavigation, NavigationProp } from "@react-navigation/native";
+import { MaterialIcons } from "@expo/vector-icons";
 import { colors, spacing, font, radius, shared } from "../styles/Globaltheme";
 import { RootStackParamList } from "../types/navigation";
 
@@ -29,11 +26,13 @@ interface Notification {
   read: boolean;
 }
 
-const EMOJI: Record<string, string> = {
-  tarea: "📋",
-  clima: "🌤️",
-  mensaje: "💬",
-  sistema: "🔔",
+type NotifIconName = React.ComponentProps<typeof MaterialIcons>["name"];
+
+const NOTIF_ICON: Record<string, NotifIconName> = {
+  tarea: "assignment",
+  clima: "cloud",
+  mensaje: "chat-bubble-outline",
+  sistema: "notifications",
 };
 
 const BG: Record<string, string> = {
@@ -41,6 +40,13 @@ const BG: Record<string, string> = {
   clima: "#DBEAFE",
   mensaje: "#FEF3C7",
   sistema: "#F3F4F6",
+};
+
+const ICON_COLOR: Record<string, string> = {
+  tarea: "#2E7D32",
+  clima: "#1E40AF",
+  mensaje: "#92400E",
+  sistema: "#374151",
 };
 
 const MOCK_NOTIFICATIONS: Notification[] = [
@@ -96,7 +102,6 @@ export default function NotificationsScreen() {
   const navigation = useNavigation<Nav>();
   const [notifications, setNotifications] =
     useState<Notification[]>(MOCK_NOTIFICATIONS);
-  const [loading] = useState(false);
   const [prefs, setPrefs] = useState<PrefItem[]>([
     { id: "tareas", label: "Tareas y recordatorios", value: true },
     { id: "clima", label: "Alertas meteorológicas", value: true },
@@ -105,15 +110,12 @@ export default function NotificationsScreen() {
   ]);
 
   const unread = notifications.filter((n) => !n.read).length;
-
   const markAllRead = () =>
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-
   const markRead = (id: string) =>
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
     );
-
   const togglePref = (id: string) =>
     setPrefs((prev) =>
       prev.map((p) => (p.id === id ? { ...p, value: !p.value } : p)),
@@ -125,7 +127,11 @@ export default function NotificationsScreen() {
       onPress={() => markRead(item.id)}
     >
       <View style={[styles.notifIconBox, { backgroundColor: BG[item.type] }]}>
-        <Text style={styles.notifIcon}>{EMOJI[item.type]}</Text>
+        <MaterialIcons
+          name={NOTIF_ICON[item.type]}
+          size={20}
+          color={ICON_COLOR[item.type]}
+        />
       </View>
       <View style={styles.notifContent}>
         <View style={styles.notifHeader}>
@@ -170,8 +176,14 @@ export default function NotificationsScreen() {
           <>
             {unread > 0 && (
               <View style={styles.unreadBanner}>
+                <MaterialIcons
+                  name="notifications"
+                  size={14}
+                  color={colors.primary}
+                />
                 <Text style={styles.unreadBannerText}>
-                  🔔 {unread} notificación{unread > 1 ? "es" : ""} sin leer
+                  {" "}
+                  {unread} notificación{unread > 1 ? "es" : ""} sin leer
                 </Text>
               </View>
             )}
@@ -180,7 +192,14 @@ export default function NotificationsScreen() {
         }
         ListFooterComponent={
           <View style={[shared.card, styles.prefsCard]}>
-            <Text style={styles.prefsTitle}>⚙️ Preferencias</Text>
+            <View style={styles.prefsTitleRow}>
+              <MaterialIcons
+                name="settings"
+                size={16}
+                color={colors.textSecond}
+              />
+              <Text style={styles.prefsTitle}> Preferencias</Text>
+            </View>
             {prefs.map((pref) => (
               <View key={pref.id} style={styles.prefRow}>
                 <Text style={styles.prefLabel}>{pref.label}</Text>
@@ -227,6 +246,8 @@ const styles = StyleSheet.create({
   markAllText: { color: colors.primary, fontWeight: "700", fontSize: font.sm },
   listContent: { paddingBottom: spacing.xxxl },
   unreadBanner: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.primaryDim,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
@@ -260,7 +281,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flexShrink: 0,
   },
-  notifIcon: { fontSize: 20 },
   notifContent: { flex: 1 },
   notifHeader: {
     flexDirection: "row",
@@ -289,11 +309,15 @@ const styles = StyleSheet.create({
   },
   separator: { height: 1, backgroundColor: colors.border },
   prefsCard: { marginHorizontal: spacing.lg, marginTop: spacing.lg },
+  prefsTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: spacing.md,
+  },
   prefsTitle: {
     fontSize: font.sm,
     fontWeight: "700",
     color: colors.textSecond,
-    marginBottom: spacing.md,
   },
   prefRow: {
     flexDirection: "row",

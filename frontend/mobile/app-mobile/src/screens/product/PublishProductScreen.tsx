@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
+import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 import {
   colors,
   shared,
@@ -41,13 +42,55 @@ const CATEGORIES: ProductCategory[] = [
   "Otros",
 ];
 const UNITS: ProductUnit[] = ["€/kg", "€/u", "€/L", "€/ha", "€/saco"];
-const CATEGORY_EMOJI: Record<string, string> = {
-  Semillas: "🌱",
-  Fertilizantes: "🧪",
-  Maquinaria: "🚜",
-  Fitosanitarios: "🛡️",
-  Otros: "📦",
+
+type CategoryIconDef =
+  | { lib: "mi"; name: React.ComponentProps<typeof MaterialIcons>["name"] }
+  | {
+      lib: "mci";
+      name: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
+    };
+
+const CATEGORY_ICON: Record<string, CategoryIconDef> = {
+  Semillas: { lib: "mci", name: "sprout" },
+  Fertilizantes: { lib: "mci", name: "flask-outline" },
+  Maquinaria: { lib: "mci", name: "tractor" },
+  Fitosanitarios: { lib: "mi", name: "shield" },
+  Otros: { lib: "mi", name: "inventory-2" },
 };
+
+function CategoryIcon({
+  category,
+  color,
+  size = 13,
+}: {
+  category: string;
+  color: string;
+  size?: number;
+}) {
+  const def = CATEGORY_ICON[category];
+  if (!def) return null;
+  if (def.lib === "mci") {
+    return (
+      <MaterialCommunityIcons
+        name={
+          def.name as React.ComponentProps<
+            typeof MaterialCommunityIcons
+          >["name"]
+        }
+        size={size}
+        color={color}
+      />
+    );
+  }
+  return (
+    <MaterialIcons
+      name={def.name as React.ComponentProps<typeof MaterialIcons>["name"]}
+      size={size}
+      color={color}
+    />
+  );
+}
+
 const PROVINCES = [
   "Álava",
   "Albacete",
@@ -245,7 +288,7 @@ export default function PublishProductScreen() {
         images,
       });
       Alert.alert(
-        "✅ Producto publicado",
+        "Producto publicado",
         "Tu producto ya está visible en el mercado.",
         [{ text: "Ver mercado", onPress: () => navigation.goBack() }],
       );
@@ -301,7 +344,11 @@ export default function PublishProductScreen() {
                     }
                     hitSlop={6}
                   >
-                    <Text style={styles.thumbDeleteText}>✕</Text>
+                    <MaterialIcons
+                      name="close"
+                      size={10}
+                      color={colors.white}
+                    />
                   </Pressable>
                 </View>
               ))}
@@ -313,7 +360,11 @@ export default function PublishProductScreen() {
                   ]}
                   onPress={handleAddPhoto}
                 >
-                  <Text style={styles.addPhotoIcon}>📷</Text>
+                  <MaterialIcons
+                    name="photo-camera"
+                    size={24}
+                    color={colors.textMuted}
+                  />
                   <Text style={styles.addPhotoText}>
                     {images.length === 0 ? "Añadir fotos" : "Añadir más"}
                   </Text>
@@ -358,7 +409,13 @@ export default function PublishProductScreen() {
                   style={[styles.chip, category === cat && styles.chipActive]}
                   onPress={() => setCategory(cat)}
                 >
-                  <Text style={styles.chipEmoji}>{CATEGORY_EMOJI[cat]}</Text>
+                  <CategoryIcon
+                    category={cat}
+                    color={
+                      category === cat ? colors.primary : colors.textSecond
+                    }
+                    size={13}
+                  />
                   <Text
                     style={[
                       styles.chipText,
@@ -410,7 +467,15 @@ export default function PublishProductScreen() {
                   }}
                 >
                   <Text style={styles.unitSelectorText}>{unit}</Text>
-                  <Text style={styles.arrow}>{showUnitPicker ? "▲" : "▼"}</Text>
+                  <MaterialIcons
+                    name={
+                      showUnitPicker
+                        ? "keyboard-arrow-up"
+                        : "keyboard-arrow-down"
+                    }
+                    size={16}
+                    color={colors.textMuted}
+                  />
                 </Pressable>
                 {showUnitPicker && (
                   <View style={styles.unitDropdown}>
@@ -513,8 +578,23 @@ export default function PublishProductScreen() {
                 setShowUnitPicker(false);
               }}
             >
-              <Text style={styles.provinceSelectorText}>📍 {province}</Text>
-              <Text style={styles.arrow}>{showProvincePicker ? "▲" : "▼"}</Text>
+              <View style={styles.provinceSelectorLeft}>
+                <MaterialIcons
+                  name="location-on"
+                  size={16}
+                  color={colors.primary}
+                />
+                <Text style={styles.provinceSelectorText}> {province}</Text>
+              </View>
+              <MaterialIcons
+                name={
+                  showProvincePicker
+                    ? "keyboard-arrow-up"
+                    : "keyboard-arrow-down"
+                }
+                size={16}
+                color={colors.textMuted}
+              />
             </Pressable>
             {showProvincePicker && (
               <ScrollView
@@ -606,7 +686,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  thumbDeleteText: { color: colors.white, fontSize: 10, fontWeight: "800" },
   addPhotoBtn: {
     width: 90,
     height: 90,
@@ -619,7 +698,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: spacing.xs,
   },
-  addPhotoIcon: { fontSize: 24 },
   addPhotoText: {
     fontSize: font.xs,
     color: colors.textMuted,
@@ -675,7 +753,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryDim,
     borderColor: colors.primary,
   },
-  chipEmoji: { fontSize: 13 },
   chipText: { fontSize: font.sm, fontWeight: "600", color: colors.textSecond },
   chipTextActive: { color: colors.primary },
   priceSection: { zIndex: 20, overflow: "visible" },
@@ -709,7 +786,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: colors.textPrimary,
   },
-  arrow: { fontSize: 10, color: colors.textMuted },
   unitDropdown: {
     position: "absolute",
     top: 54,
@@ -725,6 +801,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 8,
     elevation: 20,
+  },
+  provinceSelectorLeft: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   provinceSelector: {
     height: 50,

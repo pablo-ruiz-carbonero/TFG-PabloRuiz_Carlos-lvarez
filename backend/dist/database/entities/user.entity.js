@@ -31,19 +31,19 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "password", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ length: 20, nullable: true }),
+    (0, typeorm_1.Column)({ name: "telefono", length: 20, nullable: true }),
     __metadata("design:type", String)
 ], User.prototype, "telefono", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)('Role'),
-    (0, typeorm_1.JoinColumn)({ name: 'rol_id' }),
+    (0, typeorm_1.ManyToOne)("Role"),
+    (0, typeorm_1.JoinColumn)({ name: "rol_id" }),
     __metadata("design:type", Object)
 ], User.prototype, "role", void 0);
 __decorate([
-    (0, typeorm_1.CreateDateColumn)({ name: 'fecha_creacion' }),
+    (0, typeorm_1.CreateDateColumn)({ name: "fecha_creacion" }),
     __metadata("design:type", Date)
 ], User.prototype, "fechaCreacion", void 0);
 exports.User = User = __decorate([
-    (0, typeorm_1.Entity)('usuarios')
+    (0, typeorm_1.Entity)("usuarios")
 ], User);
 //# sourceMappingURL=user.entity.js.map

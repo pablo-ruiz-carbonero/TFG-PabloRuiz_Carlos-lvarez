@@ -8,8 +8,8 @@ import ProfileScreen from "../screens/auth/profile/ProfileScreen";
 import EditProfileScreen from "../screens/auth/profile/EditProfileScreen";
 import ChangePasswordScreen from "../screens/auth/profile/ChangePasswordScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
-import DetailCorpScreen from "../screens/crops/DetailCorpScreen";
-import NewCorpScreen from "../screens/crops/NewCorpScreen";
+import DetailCropScreen from "../screens/crops/DetailCropScreen";
+import NewCropScreen from "../screens/crops/NewCropScreen";
 import NewTask from "../screens/crops/NewTask";
 import ProductDetailScreen from "../screens/product/ProductDetailScreen";
 import PublishProductScreen from "../screens/product/PublishProductScreen";
@@ -26,13 +26,25 @@ const MainStack = () => {
       <Stack.Screen name="WeatherScreen" component={WeatherScreen} />
       <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
       <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
-      <Stack.Screen name="ChangePasswordScreen" component={ChangePasswordScreen} />
-      <Stack.Screen name="NotificationsScreen" component={NotificationsScreen} />
-      <Stack.Screen name="DetailCorpScreen" component={DetailCorpScreen} />
-      <Stack.Screen name="NewCorpScreen" component={NewCorpScreen} />
+      <Stack.Screen
+        name="ChangePasswordScreen"
+        component={ChangePasswordScreen}
+      />
+      <Stack.Screen
+        name="NotificationsScreen"
+        component={NotificationsScreen}
+      />
+      <Stack.Screen name="DetailCropScreen" component={DetailCropScreen} />
+      <Stack.Screen name="NewCropScreen" component={NewCropScreen} />
       <Stack.Screen name="NewTask" component={NewTask} />
-      <Stack.Screen name="ProductDetailScreen" component={ProductDetailScreen} />
-      <Stack.Screen name="PublishProductScreen" component={PublishProductScreen} />
+      <Stack.Screen
+        name="ProductDetailScreen"
+        component={ProductDetailScreen}
+      />
+      <Stack.Screen
+        name="PublishProductScreen"
+        component={PublishProductScreen}
+      />
       <Stack.Screen name="MyListingsScreen" component={MyListingsScreen} />
       <Stack.Screen name="ChatScreen" component={ChatScreen} />
       <Stack.Screen name="MarketPlaceScreen" component={MarketPlaceScreen} />

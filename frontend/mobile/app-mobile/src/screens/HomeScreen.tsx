@@ -10,29 +10,22 @@ import {
   Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation, NavigationProp } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 import PerfilMenu from "../components/PerfilMenu";
 import WeatherCard from "../components/WeatherCard";
 import { colors, shared, spacing, font, radius } from "../styles/Globaltheme";
 import { RootStackParamList } from "../types/navigation";
-
 import { useAuth } from "../features/auth/hooks/useAuth";
 import { useCrops } from "../features/crops/hooks/useCrops";
 import { useChat } from "../features/chat/hooks/useChat";
 
-type Nav = NavigationProp<RootStackParamList>;
-
-const TASK_ICON: Record<string, string> = {
-  Riego: "💧",
-  Siembra: "🌱",
-  Fertilización: "🧪",
-  Cosecha: "🌾",
-};
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function HomeScreen() {
   const navigation = useNavigation<Nav>();
-
   const { user } = useAuth();
   const { crops, fetchCrops } = useCrops();
   const { conversations, fetchConversations } = useChat();
@@ -72,20 +65,17 @@ export default function HomeScreen() {
     .slice(0, 3)
     .map((c) => ({
       id: c.id,
-      icon: "📋",
       title: `${c.tasksCount} tarea${c.tasksCount > 1 ? "s" : ""} pendiente${c.tasksCount > 1 ? "s" : ""}`,
       subtitle: `${c.name} · ${c.currentPhase}`,
-      screen: "DetailCorpScreen" as const,
+      screen: "DetailCropScreen" as const,
       params: { cropId: c.id },
     }));
 
   const hour = new Date().getHours();
   const greeting =
     hour < 12 ? "Buenos días" : hour < 20 ? "Buenas tardes" : "Buenas noches";
-
   const firstName =
-    user?.name?.split(" ")[0] ?? user?.email?.split("@")[0] ?? "agricultor";
-
+    user?.nombre?.split(" ")[0] ?? user?.email?.split("@")[0] ?? "agricultor";
   const dateStr = new Date()
     .toLocaleDateString("es-ES", {
       weekday: "long",
@@ -102,7 +92,7 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <Text style={styles.greeting}>
-            {greeting}, {firstName} 👋
+            {greeting}, {firstName}
           </Text>
           <Text style={styles.date}>{dateStr}</Text>
         </View>
@@ -125,7 +115,13 @@ export default function HomeScreen() {
             <StatBox
               value={activeCrops.length}
               label="Cultivos activos"
-              icon="🌿"
+              icon={
+                <MaterialCommunityIcons
+                  name="sprout"
+                  size={20}
+                  color={colors.primary}
+                />
+              }
               color={colors.primary}
               onPress={() =>
                 navigation.navigate("BottomNav", { screen: "Crops" })
@@ -134,7 +130,15 @@ export default function HomeScreen() {
             <StatBox
               value={pendingTasksTotal}
               label="Tareas pendientes"
-              icon="📋"
+              icon={
+                <MaterialIcons
+                  name="assignment"
+                  size={20}
+                  color={
+                    pendingTasksTotal > 0 ? colors.warning : colors.primary
+                  }
+                />
+              }
               color={pendingTasksTotal > 0 ? colors.warning : colors.primary}
               onPress={() =>
                 navigation.navigate("BottomNav", { screen: "Crops" })
@@ -143,7 +147,13 @@ export default function HomeScreen() {
             <StatBox
               value={unreadMessages}
               label="Mensajes nuevos"
-              icon="💬"
+              icon={
+                <MaterialIcons
+                  name="chat-bubble-outline"
+                  size={20}
+                  color={unreadMessages > 0 ? colors.info : colors.primary}
+                />
+              }
               color={unreadMessages > 0 ? colors.info : colors.primary}
               onPress={() =>
                 navigation.navigate("BottomNav", { screen: "Chats" })
@@ -157,24 +167,40 @@ export default function HomeScreen() {
           <Text style={shared.sectionTitle}>Accesos rápidos</Text>
           <View style={styles.quickRow}>
             <QuickAction
-              icon="🌱"
+              icon={
+                <MaterialCommunityIcons
+                  name="sprout"
+                  size={22}
+                  color={colors.primary}
+                />
+              }
               label="Nuevo cultivo"
-              onPress={() => navigation.navigate("NewCorpScreen")}
+              onPress={() => navigation.navigate("NewCropScreen")}
             />
             <QuickAction
-              icon="🛒"
+              icon={
+                <MaterialIcons name="store" size={22} color={colors.primary} />
+              }
               label="Mercado"
               onPress={() =>
                 navigation.navigate("BottomNav", { screen: "MarketPlace" })
               }
             />
             <QuickAction
-              icon="☁️"
+              icon={
+                <MaterialIcons name="cloud" size={22} color={colors.primary} />
+              }
               label="Clima"
               onPress={() => navigation.navigate("WeatherScreen")}
             />
             <QuickAction
-              icon="📦"
+              icon={
+                <MaterialIcons
+                  name="list-alt"
+                  size={22}
+                  color={colors.primary}
+                />
+              }
               label="Mis anuncios"
               onPress={() => navigation.navigate("MyListingsScreen")}
             />
@@ -196,7 +222,11 @@ export default function HomeScreen() {
 
           {recentActivity.length === 0 ? (
             <View style={styles.emptyActivity}>
-              <Text style={styles.emptyActivityIcon}>🎉</Text>
+              <MaterialIcons
+                name="check-circle-outline"
+                size={36}
+                color={colors.primary}
+              />
               <Text style={styles.emptyActivityText}>
                 Sin tareas pendientes
               </Text>
@@ -213,7 +243,11 @@ export default function HomeScreen() {
                 onPress={() => navigation.navigate(item.screen, item.params)}
               >
                 <View style={styles.activityDot}>
-                  <Text style={styles.activityDotIcon}>{item.icon}</Text>
+                  <MaterialIcons
+                    name="assignment"
+                    size={16}
+                    color={colors.primary}
+                  />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.activityTitle}>{item.title}</Text>
@@ -247,11 +281,15 @@ export default function HomeScreen() {
                   pressed && { opacity: 0.8 },
                 ]}
                 onPress={() =>
-                  navigation.navigate("DetailCorpScreen", { cropId: crop.id })
+                  navigation.navigate("DetailCropScreen", { cropId: crop.id })
                 }
               >
                 <View style={styles.cropIcon}>
-                  <Text style={{ fontSize: 20 }}>🌿</Text>
+                  <MaterialCommunityIcons
+                    name="sprout"
+                    size={20}
+                    color={colors.primary}
+                  />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.cropName}>{crop.name}</Text>
@@ -291,7 +329,7 @@ function StatBox({
 }: {
   value: number;
   label: string;
-  icon: string;
+  icon: React.ReactNode;
   color: string;
   onPress: () => void;
 }) {
@@ -300,7 +338,7 @@ function StatBox({
       style={({ pressed }) => [styles.statBox, pressed && { opacity: 0.8 }]}
       onPress={onPress}
     >
-      <Text style={styles.statIcon}>{icon}</Text>
+      {icon}
       <Text style={[styles.statValue, { color }]}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </Pressable>
@@ -312,7 +350,7 @@ function QuickAction({
   label,
   onPress,
 }: {
-  icon: string;
+  icon: React.ReactNode;
   label: string;
   onPress: () => void;
 }) {
@@ -321,9 +359,7 @@ function QuickAction({
       style={({ pressed }) => [styles.quickAction, pressed && { opacity: 0.8 }]}
       onPress={onPress}
     >
-      <View style={styles.quickActionIcon}>
-        <Text style={{ fontSize: 22 }}>{icon}</Text>
-      </View>
+      <View style={styles.quickActionIcon}>{icon}</View>
       <Text style={styles.quickActionLabel}>{label}</Text>
     </Pressable>
   );
@@ -359,7 +395,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.xs,
   },
-  statIcon: { fontSize: 20 },
   statValue: { fontSize: font.xxl, fontWeight: "800" },
   statLabel: {
     fontSize: font.xs,
@@ -395,7 +430,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xl,
     gap: spacing.sm,
   },
-  emptyActivityIcon: { fontSize: 36 },
   emptyActivityText: {
     fontSize: font.md,
     fontWeight: "700",
@@ -418,7 +452,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  activityDotIcon: { fontSize: 16 },
   activityTitle: {
     fontSize: font.sm,
     fontWeight: "700",

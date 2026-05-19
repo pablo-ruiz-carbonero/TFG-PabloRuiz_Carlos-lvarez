@@ -1,6 +1,6 @@
 // src/screens/product/ProductDetailScreen.tsx
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -22,6 +22,7 @@ import {
   RouteProp,
   NavigationProp,
 } from "@react-navigation/native";
+import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 import {
   colors,
   shared,
@@ -32,6 +33,7 @@ import {
 import { RootStackParamList } from "../../types/navigation";
 import { useProductDetail } from "../../features/products/hooks/useProductsDetail";
 import { useChat } from "../../features/chat/hooks/useChat";
+import { useAuth } from "../../features/auth/hooks/useAuth";
 
 type RouteP = RouteProp<RootStackParamList, "ProductDetailScreen">;
 type Nav = NavigationProp<RootStackParamList>;
@@ -39,13 +41,48 @@ type Nav = NavigationProp<RootStackParamList>;
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const GALLERY_HEIGHT = 260;
 
-const CATEGORY_EMOJI: Record<string, string> = {
-  Semillas: "🌱",
-  Fertilizantes: "🧪",
-  Maquinaria: "🚜",
-  Fitosanitarios: "🛡️",
-  Otros: "📦",
+type CategoryIconDef =
+  | {
+      lib: "community";
+      name: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
+    }
+  | {
+      lib: "material";
+      name: React.ComponentProps<typeof MaterialIcons>["name"];
+    };
+
+const CATEGORY_ICON: Record<string, CategoryIconDef> = {
+  Semillas: { lib: "community", name: "sprout" },
+  Fertilizantes: { lib: "material", name: "science" },
+  Maquinaria: { lib: "community", name: "tractor" },
+  Fitosanitarios: { lib: "material", name: "shield" },
+  Otros: { lib: "material", name: "category" },
 };
+
+function CategoryIcon({
+  category,
+  size = 40,
+  color,
+}: {
+  category: string;
+  size?: number;
+  color: string;
+}) {
+  const def = CATEGORY_ICON[category] ?? {
+    lib: "material",
+    name: "category" as const,
+  };
+  if (def.lib === "community") {
+    return (
+      <MaterialCommunityIcons
+        name={def.name as any}
+        size={size}
+        color={color}
+      />
+    );
+  }
+  return <MaterialIcons name={def.name as any} size={size} color={color} />;
+}
 
 function Stars({ rating }: { rating: number }) {
   const full = Math.floor(rating);
@@ -59,7 +96,7 @@ function Stars({ rating }: { rating: number }) {
   );
 }
 
-// ─── Carrusel de fotos ─────────────────────────────────────────────────────────
+// ─── Carrusel de fotos ────────────────────────────────────────────────────────
 function ImageCarousel({
   images,
   category,
@@ -77,9 +114,7 @@ function ImageCarousel({
   if (!images || images.length === 0) {
     return (
       <View style={carouselStyles.placeholder}>
-        <Text style={carouselStyles.placeholderEmoji}>
-          {CATEGORY_EMOJI[category] ?? "📦"}
-        </Text>
+        <CategoryIcon category={category} size={64} color={colors.primary} />
         <Text style={carouselStyles.placeholderText}>Sin fotos</Text>
       </View>
     );
@@ -103,7 +138,6 @@ function ImageCarousel({
           />
         )}
       />
-      {/* Indicadores de punto */}
       {images.length > 1 && (
         <View style={carouselStyles.dotsRow}>
           {images.map((_, i) => (
@@ -117,7 +151,6 @@ function ImageCarousel({
           ))}
         </View>
       )}
-      {/* Contador de fotos */}
       <View style={carouselStyles.counter}>
         <Text style={carouselStyles.counterText}>
           {activeIdx + 1}/{images.length}
@@ -133,10 +166,7 @@ const carouselStyles = StyleSheet.create({
     position: "relative",
     backgroundColor: colors.primaryDim,
   },
-  image: {
-    width: SCREEN_WIDTH,
-    height: GALLERY_HEIGHT,
-  },
+  image: { width: SCREEN_WIDTH, height: GALLERY_HEIGHT },
   placeholder: {
     height: GALLERY_HEIGHT,
     backgroundColor: colors.primaryDim,
@@ -144,7 +174,6 @@ const carouselStyles = StyleSheet.create({
     justifyContent: "center",
     gap: spacing.sm,
   },
-  placeholderEmoji: { fontSize: 70 },
   placeholderText: {
     fontSize: font.sm,
     color: colors.textMuted,
@@ -165,11 +194,7 @@ const carouselStyles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: "rgba(255,255,255,0.5)",
   },
-  dotActive: {
-    backgroundColor: colors.white,
-    width: 18,
-    borderRadius: 3,
-  },
+  dotActive: { backgroundColor: colors.white, width: 18, borderRadius: 3 },
   counter: {
     position: "absolute",
     top: spacing.md,
@@ -182,7 +207,7 @@ const carouselStyles = StyleSheet.create({
   counterText: { color: colors.white, fontSize: font.xs, fontWeight: "700" },
 });
 
-// ─── Pantalla principal ────────────────────────────────────────────────────────
+// ─── Pantalla principal ───────────────────────────────────────────────────────
 export default function ProductDetailScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<RouteP>();
@@ -190,6 +215,12 @@ export default function ProductDetailScreen() {
 
   const { product, loading, error, loadProduct } = useProductDetail(productId);
   const { getOrCreateConversation } = useChat();
+  const { user } = useAuth();
+
+  const isOwnProduct =
+    !!user &&
+    !!product &&
+    (String(user.id) === product.seller.id || product.seller.id === "me");
 
   useEffect(() => {
     loadProduct();
@@ -248,7 +279,7 @@ export default function ProductDetailScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header flotante sobre el carrusel */}
+        {/* Header */}
         <View style={styles.header}>
           <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
             <Text style={styles.backButton}>← Volver</Text>
@@ -259,7 +290,7 @@ export default function ProductDetailScreen() {
           <View style={{ width: 60 }} />
         </View>
 
-        {/* Carrusel de fotos */}
+        {/* Carrusel */}
         <ImageCarousel images={product.images} category={product.category} />
 
         {/* Título y precio */}
@@ -278,10 +309,20 @@ export default function ProductDetailScreen() {
         {/* Badges */}
         <View style={styles.badgeRow}>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>📦 Stock: {product.stock}</Text>
+            <MaterialIcons
+              name="inventory-2"
+              size={13}
+              color={colors.primary}
+            />
+            <Text style={styles.badgeText}> Stock: {product.stock}</Text>
           </View>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>📍 {product.location}</Text>
+            <MaterialIcons
+              name="location-on"
+              size={13}
+              color={colors.primary}
+            />
+            <Text style={styles.badgeText}> {product.location}</Text>
           </View>
         </View>
 
@@ -316,38 +357,69 @@ export default function ProductDetailScreen() {
 
         {/* Ubicación */}
         <View style={[shared.card, styles.section]}>
-          <Text style={shared.sectionTitle}>📍 Ubicación</Text>
+          <View style={styles.sectionTitleRow}>
+            <MaterialIcons
+              name="location-on"
+              size={16}
+              color={colors.textPrimary}
+            />
+            <Text style={shared.sectionTitle}> Ubicación</Text>
+          </View>
           <Text style={styles.locationText}>{product.province}</Text>
         </View>
 
         {/* Acciones */}
         <View style={styles.actionButtons}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.btnContact,
-              pressed && { opacity: 0.85 },
-            ]}
-            onPress={handleContactSeller}
-          >
-            <Text style={styles.btnContactText}>Contactar vendedor</Text>
-          </Pressable>
-
-          <Pressable
-            style={({ pressed }) => [
-              styles.btnMoreSeller,
-              pressed && { opacity: 0.85 },
-            ]}
-            onPress={() =>
-              Alert.alert(
-                "Próximamente",
-                "Ver más productos de este vendedor estará disponible pronto.",
-              )
-            }
-          >
-            <Text style={styles.btnMoreSellerText}>
-              Ver más de este vendedor
-            </Text>
-          </Pressable>
+          {isOwnProduct ? (
+            <Pressable
+              style={({ pressed }) => [
+                styles.btnMyListings,
+                pressed && { opacity: 0.85 },
+              ]}
+              onPress={() => navigation.navigate("MyListingsScreen")}
+            >
+              <MaterialIcons name="list-alt" size={18} color={colors.primary} />
+              <Text style={styles.btnMyListingsText}>
+                {" "}
+                Ver mis publicaciones
+              </Text>
+            </Pressable>
+          ) : (
+            <>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.btnContact,
+                  pressed && { opacity: 0.85 },
+                ]}
+                onPress={handleContactSeller}
+              >
+                <MaterialIcons
+                  name="chat-bubble-outline"
+                  size={18}
+                  color={colors.white}
+                />
+                <Text style={styles.btnContactText}> Contactar vendedor</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.btnMoreSeller,
+                  pressed && { opacity: 0.85 },
+                ]}
+                onPress={() =>
+                  Alert.alert(
+                    "Próximamente",
+                    "Ver más productos de este vendedor estará disponible pronto.",
+                  )
+                }
+              >
+                <MaterialIcons name="store" size={18} color={colors.primary} />
+                <Text style={styles.btnMoreSellerText}>
+                  {" "}
+                  Ver más de este vendedor
+                </Text>
+              </Pressable>
+            </>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -411,6 +483,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   badge: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.primaryDim,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs + 2,
@@ -418,6 +492,11 @@ const styles = StyleSheet.create({
   },
   badgeText: { fontSize: font.xs, color: colors.primary, fontWeight: "600" },
   section: { marginHorizontal: spacing.lg, marginBottom: spacing.md },
+  sectionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: spacing.xs,
+  },
   sellerRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -465,20 +544,39 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   btnContact: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: colors.primary,
     paddingVertical: spacing.md + 2,
     borderRadius: radius.md,
-    alignItems: "center",
   },
   btnContactText: { color: colors.white, fontWeight: "700", fontSize: font.md },
   btnMoreSeller: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1.5,
     borderColor: colors.primary,
     paddingVertical: spacing.md,
     borderRadius: radius.md,
-    alignItems: "center",
   },
   btnMoreSellerText: {
+    color: colors.primary,
+    fontWeight: "700",
+    fontSize: font.md,
+  },
+  btnMyListings: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.primaryDim,
+    paddingVertical: spacing.md + 2,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+  },
+  btnMyListingsText: {
     color: colors.primary,
     fontWeight: "700",
     fontSize: font.md,

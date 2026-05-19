@@ -1,4 +1,4 @@
-// src/screens/product/MyListingsScreen.tsx
+// src/screens/auth/profile/MyListingsScreen.tsx
 
 import React, { useCallback } from "react";
 import {
@@ -16,6 +16,7 @@ import {
   NavigationProp,
   useFocusEffect,
 } from "@react-navigation/native";
+import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 import {
   colors,
   shared,
@@ -29,13 +30,48 @@ import { useProducts } from "../../../features/products/hooks/useProducts";
 
 type Nav = NavigationProp<RootStackParamList>;
 
-const CATEGORY_EMOJI: Record<string, string> = {
-  Semillas: "🌱",
-  Fertilizantes: "🧪",
-  Maquinaria: "🚜",
-  Fitosanitarios: "🛡️",
-  Otros: "📦",
+type CategoryIconDef =
+  | {
+      lib: "community";
+      name: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
+    }
+  | {
+      lib: "material";
+      name: React.ComponentProps<typeof MaterialIcons>["name"];
+    };
+
+const CATEGORY_ICON: Record<string, CategoryIconDef> = {
+  Semillas: { lib: "community", name: "sprout" },
+  Fertilizantes: { lib: "material", name: "science" },
+  Maquinaria: { lib: "community", name: "tractor" },
+  Fitosanitarios: { lib: "material", name: "shield" },
+  Otros: { lib: "material", name: "category" },
 };
+
+function CategoryIcon({
+  category,
+  size = 24,
+  color,
+}: {
+  category: string;
+  size?: number;
+  color: string;
+}) {
+  const def = CATEGORY_ICON[category] ?? {
+    lib: "material",
+    name: "category" as const,
+  };
+  if (def.lib === "community") {
+    return (
+      <MaterialCommunityIcons
+        name={def.name as any}
+        size={size}
+        color={color}
+      />
+    );
+  }
+  return <MaterialIcons name={def.name as any} size={size} color={color} />;
+}
 
 function ListingCard({
   item,
@@ -53,9 +89,11 @@ function ListingCard({
     >
       <View style={styles.cardLeft}>
         <View style={styles.imgBox}>
-          <Text style={styles.imgEmoji}>
-            {CATEGORY_EMOJI[item.category] ?? "📦"}
-          </Text>
+          <CategoryIcon
+            category={item.category}
+            size={24}
+            color={colors.primary}
+          />
         </View>
         <View style={styles.cardInfo}>
           <Text style={styles.cardName} numberOfLines={1}>
@@ -85,7 +123,7 @@ function ListingCard({
           </Text>
         </View>
         <Pressable onPress={onDelete} hitSlop={8} style={styles.deleteBtn}>
-          <Text style={styles.deleteBtnText}>🗑</Text>
+          <MaterialIcons name="delete-outline" size={20} color={colors.error} />
         </Pressable>
       </View>
     </Pressable>
@@ -136,7 +174,8 @@ export default function MyListingsScreen() {
           style={({ pressed }) => [styles.btnNew, pressed && { opacity: 0.8 }]}
           onPress={() => navigation.navigate("PublishProductScreen")}
         >
-          <Text style={styles.btnNewText}>+ Nuevo</Text>
+          <MaterialIcons name="add" size={16} color={colors.white} />
+          <Text style={styles.btnNewText}> Nuevo</Text>
         </Pressable>
       </View>
 
@@ -153,7 +192,11 @@ export default function MyListingsScreen() {
         </View>
       ) : myProducts.length === 0 ? (
         <View style={styles.center}>
-          <Text style={styles.emptyIcon}>📦</Text>
+          <MaterialIcons
+            name="inventory-2"
+            size={48}
+            color={colors.textMuted}
+          />
           <Text style={styles.emptyTitle}>Sin anuncios publicados</Text>
           <Text style={styles.emptySubtitle}>
             Publica tu primer producto y llega a otros agricultores
@@ -217,6 +260,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   btnNew: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -253,7 +298,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  imgEmoji: { fontSize: 24 },
   cardInfo: { flex: 1 },
   cardName: { fontSize: font.md, fontWeight: "700", color: colors.textPrimary },
   cardCategory: { fontSize: font.xs, color: colors.textMuted, marginTop: 2 },
@@ -274,7 +318,6 @@ const styles = StyleSheet.create({
   stockText: { fontSize: font.xs, color: colors.primary, fontWeight: "600" },
   stockTextEmpty: { color: colors.error },
   deleteBtn: { padding: spacing.xs },
-  deleteBtnText: { fontSize: 16 },
   separator: { height: 1, backgroundColor: colors.border },
   center: {
     flex: 1,
@@ -283,7 +326,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   errorText: { fontSize: font.md, color: colors.error },
-  emptyIcon: { fontSize: 48 },
   emptyTitle: {
     fontSize: font.lg,
     fontWeight: "700",

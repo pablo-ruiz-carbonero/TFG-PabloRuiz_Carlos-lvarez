@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
+import { MaterialIcons } from "@expo/vector-icons";
 import {
   colors,
   shared,
@@ -30,7 +31,7 @@ type Nav = NavigationProp<RootStackParamList>;
 interface MenuOption {
   id: string;
   label: string;
-  icon: string;
+  icon: React.ComponentProps<typeof MaterialIcons>["name"];
   screen?: keyof RootStackParamList;
   danger?: boolean;
 }
@@ -39,28 +40,28 @@ const MENU_OPTIONS: MenuOption[] = [
   {
     id: "edit",
     label: "Editar perfil",
-    icon: "✏️",
+    icon: "edit",
     screen: "EditProfileScreen",
   },
   {
     id: "listings",
     label: "Mis anuncios",
-    icon: "📦",
+    icon: "list-alt",
     screen: "MyListingsScreen",
   },
   {
     id: "notif",
     label: "Notificaciones",
-    icon: "🔔",
+    icon: "notifications",
     screen: "NotificationsScreen",
   },
   {
     id: "password",
     label: "Cambiar contraseña",
-    icon: "🔒",
+    icon: "lock",
     screen: "ChangePasswordScreen",
   },
-  { id: "logout", label: "Cerrar sesión", icon: "🚪", danger: true },
+  { id: "logout", label: "Cerrar sesión", icon: "logout", danger: true },
 ];
 
 export default function ProfileScreen() {
@@ -82,7 +83,6 @@ export default function ProfileScreen() {
   }
 
   const initials = getUserInitials(user);
-
   const stats = [
     { label: "Cultivos", value: crops.length },
     { label: "Anuncios", value: myProducts.length },
@@ -126,22 +126,18 @@ export default function ProfileScreen() {
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{initials}</Text>
           </View>
-
-          {/* FIX: user.nombre en lugar de user.name */}
           <Text style={styles.profileName}>{user.nombre ?? "Sin nombre"}</Text>
-
-          {/* FIX: user.rol en lugar de user.role */}
           {user.rol && (
             <View style={styles.roleBadge}>
               <Text style={styles.roleBadgeText}>{user.rol}</Text>
             </View>
           )}
-
           <Text style={styles.profileEmail}>{user.email}</Text>
-
-          {/* FIX: user.telefono en lugar de user.phone / user.location */}
           {user.telefono && (
-            <Text style={styles.profileLocation}>📞 {user.telefono}</Text>
+            <View style={styles.phoneRow}>
+              <MaterialIcons name="phone" size={14} color={colors.textMuted} />
+              <Text style={styles.profileLocation}> {user.telefono}</Text>
+            </View>
           )}
         </View>
 
@@ -174,7 +170,11 @@ export default function ProfileScreen() {
                       option.danger && styles.menuIconBoxDanger,
                     ]}
                   >
-                    <Text style={styles.menuIcon}>{option.icon}</Text>
+                    <MaterialIcons
+                      name={option.icon}
+                      size={18}
+                      color={option.danger ? colors.error : colors.primary}
+                    />
                   </View>
                   <Text
                     style={[
@@ -185,7 +185,13 @@ export default function ProfileScreen() {
                     {option.label}
                   </Text>
                 </View>
-                {!option.danger && <Text style={styles.menuArrow}>→</Text>}
+                {!option.danger && (
+                  <MaterialIcons
+                    name="chevron-right"
+                    size={20}
+                    color={colors.textMuted}
+                  />
+                )}
               </Pressable>
               {index < MENU_OPTIONS.length - 1 && !option.danger && (
                 <View style={styles.itemSeparator} />
@@ -254,6 +260,7 @@ const styles = StyleSheet.create({
     color: colors.textSecond,
     marginBottom: spacing.xs,
   },
+  phoneRow: { flexDirection: "row", alignItems: "center" },
   profileLocation: { fontSize: font.sm, color: colors.textMuted },
   statsRow: {
     flexDirection: "row",
@@ -297,14 +304,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   menuIconBoxDanger: { backgroundColor: colors.errorDim },
-  menuIcon: { fontSize: 18 },
   menuLabel: {
     fontSize: font.md,
     fontWeight: "600",
     color: colors.textPrimary,
   },
   menuLabelDanger: { color: colors.error },
-  menuArrow: { fontSize: font.md, color: colors.textMuted },
   itemSeparator: {
     height: 1,
     backgroundColor: colors.border,

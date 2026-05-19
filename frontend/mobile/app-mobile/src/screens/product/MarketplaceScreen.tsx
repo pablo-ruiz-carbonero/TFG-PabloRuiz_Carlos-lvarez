@@ -18,6 +18,7 @@ import {
   NavigationProp,
   useFocusEffect,
 } from "@react-navigation/native";
+import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 import {
   colors,
   shared,
@@ -34,22 +35,82 @@ import { useProducts } from "../../features/products/hooks/useProducts";
 
 type Nav = NavigationProp<RootStackParamList>;
 
-const CATEGORIES: { label: string; value: ProductCategory | "Todos" }[] = [
-  { label: "Todos", value: "Todos" },
-  { label: "🌱 Semillas", value: "Semillas" },
-  { label: "🧪 Fertilizantes", value: "Fertilizantes" },
-  { label: "🚜 Maquinaria", value: "Maquinaria" },
-  { label: "🛡️ Fitosanitarios", value: "Fitosanitarios" },
-  { label: "📦 Otros", value: "Otros" },
-];
+type CategoryIconDef =
+  | {
+      lib: "community";
+      name: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
+    }
+  | {
+      lib: "material";
+      name: React.ComponentProps<typeof MaterialIcons>["name"];
+    };
 
-const CATEGORY_EMOJI: Record<string, string> = {
-  Semillas: "🌱",
-  Fertilizantes: "🧪",
-  Maquinaria: "🚜",
-  Fitosanitarios: "🛡️",
-  Otros: "📦",
+const CATEGORY_ICON: Record<string, CategoryIconDef> = {
+  Semillas: { lib: "community", name: "sprout" },
+  Fertilizantes: { lib: "material", name: "science" },
+  Maquinaria: { lib: "community", name: "tractor" },
+  Fitosanitarios: { lib: "material", name: "shield" },
+  Otros: { lib: "material", name: "category" },
 };
+
+function CategoryIcon({
+  category,
+  size = 32,
+  color,
+}: {
+  category: string;
+  size?: number;
+  color: string;
+}) {
+  const def = CATEGORY_ICON[category] ?? {
+    lib: "material",
+    name: "category" as const,
+  };
+  if (def.lib === "community") {
+    return (
+      <MaterialCommunityIcons
+        name={def.name as any}
+        size={size}
+        color={color}
+      />
+    );
+  }
+  return <MaterialIcons name={def.name as any} size={size} color={color} />;
+}
+
+const CATEGORIES: {
+  label: string;
+  value: ProductCategory | "Todos";
+  iconName?: string;
+  iconLib?: "material" | "community";
+}[] = [
+  { label: "Todos", value: "Todos" },
+  {
+    label: "Semillas",
+    value: "Semillas",
+    iconLib: "community",
+    iconName: "sprout",
+  },
+  {
+    label: "Fertilizantes",
+    value: "Fertilizantes",
+    iconLib: "material",
+    iconName: "science",
+  },
+  {
+    label: "Maquinaria",
+    value: "Maquinaria",
+    iconLib: "community",
+    iconName: "tractor",
+  },
+  {
+    label: "Fitosanitarios",
+    value: "Fitosanitarios",
+    iconLib: "material",
+    iconName: "shield",
+  },
+  { label: "Otros", value: "Otros", iconLib: "material", iconName: "category" },
+];
 
 function ProductCard({
   item,
@@ -74,9 +135,11 @@ function ProductCard({
             resizeMode="cover"
           />
         ) : (
-          <Text style={styles.imgEmoji}>
-            {CATEGORY_EMOJI[item.category] ?? "📦"}
-          </Text>
+          <CategoryIcon
+            category={item.category}
+            size={36}
+            color={colors.primary}
+          />
         )}
       </View>
       <View style={styles.cardBody}>
@@ -96,8 +159,7 @@ function ProductCard({
 
 export default function MarketplaceScreen() {
   const navigation = useNavigation<Nav>();
-  const { loading, error, fetchProducts, filterByCategory, search } =
-    useProducts();
+  const { loading, error, fetchProducts, filterByCategory } = useProducts();
 
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<
@@ -110,7 +172,6 @@ export default function MarketplaceScreen() {
     }, []),
   );
 
-  // Filtros client-side — sin requests extra
   const byCategory = filterByCategory(activeCategory);
   const filtered = query.trim()
     ? byCategory.filter((p) => {
@@ -135,20 +196,29 @@ export default function MarketplaceScreen() {
           ]}
           onPress={() => navigation.navigate("PublishProductScreen")}
         >
-          <Text style={styles.btnPublishText}>+ Publicar</Text>
+          <MaterialIcons name="add" size={16} color={colors.white} />
+          <Text style={styles.btnPublishText}> Publicar</Text>
         </Pressable>
       </View>
 
       {/* Buscador */}
       <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Buscar productos..."
-          placeholderTextColor={colors.textMuted}
-          value={query}
-          onChangeText={setQuery}
-          returnKeyType="search"
-        />
+        <View style={styles.searchWrapper}>
+          <MaterialIcons
+            name="search"
+            size={18}
+            color={colors.textMuted}
+            style={styles.searchIcon}
+          />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Buscar productos..."
+            placeholderTextColor={colors.textMuted}
+            value={query}
+            onChangeText={setQuery}
+            returnKeyType="search"
+          />
+        </View>
       </View>
 
       {/* Filtros categoría */}
@@ -158,25 +228,40 @@ export default function MarketplaceScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filtersContent}
         >
-          {CATEGORIES.map((cat) => (
-            <Pressable
-              key={cat.value}
-              style={[
-                styles.filterChip,
-                activeCategory === cat.value && styles.filterChipActive,
-              ]}
-              onPress={() => setActiveCategory(cat.value)}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  activeCategory === cat.value && styles.filterChipTextActive,
-                ]}
+          {CATEGORIES.map((cat) => {
+            const isActive = activeCategory === cat.value;
+            return (
+              <Pressable
+                key={cat.value}
+                style={[styles.filterChip, isActive && styles.filterChipActive]}
+                onPress={() => setActiveCategory(cat.value)}
               >
-                {cat.label}
-              </Text>
-            </Pressable>
-          ))}
+                {cat.iconName && cat.iconLib === "community" && (
+                  <MaterialCommunityIcons
+                    name={cat.iconName as any}
+                    size={13}
+                    color={isActive ? colors.white : colors.textSecond}
+                  />
+                )}
+                {cat.iconName && cat.iconLib === "material" && (
+                  <MaterialIcons
+                    name={cat.iconName as any}
+                    size={13}
+                    color={isActive ? colors.white : colors.textSecond}
+                  />
+                )}
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    isActive && styles.filterChipTextActive,
+                  ]}
+                >
+                  {cat.iconName ? " " : ""}
+                  {cat.label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </ScrollView>
       </View>
 
@@ -201,6 +286,7 @@ export default function MarketplaceScreen() {
         </View>
       ) : filtered.length === 0 ? (
         <View style={styles.center}>
+          <MaterialIcons name="store" size={48} color={colors.textMuted} />
           <Text style={styles.emptyText}>No hay productos disponibles</Text>
           <Pressable
             style={styles.btnEmpty}
@@ -251,6 +337,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   btnPublish: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -261,14 +349,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  searchInput: {
-    ...shared.input,
+  searchWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.surface,
-    marginBottom: 0,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+  },
+  searchIcon: { marginRight: spacing.xs },
+  searchInput: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    fontSize: font.md,
+    color: colors.textPrimary,
   },
   filtersWrapper: { marginBottom: spacing.sm },
   filtersContent: { paddingHorizontal: spacing.lg, gap: spacing.sm },
   filterChip: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs + 2,
     borderRadius: radius.full,
@@ -317,11 +418,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     overflow: "hidden",
   },
-  imgPhoto: {
-    width: "100%",
-    height: "100%",
-  },
-  imgEmoji: { fontSize: 40 },
+  imgPhoto: { width: "100%", height: "100%" },
   cardBody: { padding: spacing.md },
   cardName: {
     fontSize: font.sm,
